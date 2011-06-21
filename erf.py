@@ -19,14 +19,29 @@ detail = 'cmd=detail'
 
 #open each resource 'detail' page in erf & do something!
 res_ids = get_resource_ids() 
+erf_dict = {}
+repsonse = urllib2.urlopen('http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=1795')
+html = response.read()
 
-for id in res_ids:
-    
+#for id in res_ids:
+if re.search('<B>(Title):</B>\s([\w\s\d]+)<BR>', html):
+    print('match title')
+#if match <B>(URL):</B> <A HREF="(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)">
+if re.search('<B>(Resource Type):</B>\s(.*?)<BR>', html):
+    print('match resource type')
+if re.search'<B>(Core subject):</B>\s(.*?)<BR>', html):
+    print('match Core subject')
+if re.search('<B>(Subject):</B>\s(.*?)<BR>', html):
+    print('match subject')
+if re.search('<B>(Access):</B>\s(.*?)<BR>', html):
+    print('match access')
+if re.search('<B>(Text):</B>\s(.*?)<BR>', html): 
+    print('match full text')
+#<B>(Brief description):</B> (.*?)<BR> 
 
-#function that returns a unique set of ERF resource ids
 def get_resource_ids():
- 
-    # Open erfby type page & pull out all resTypeId=\d+ as array
+    """function that returns a unique set of ERF resource ids open erfby 
+    type page & pull out all resTypeId=\d+ as array"""
     response = urllib2.urlopen(baseurl+all_res_types)
     html = response.read()
     restypeid = re.findall('resTypeId=\d+', html)
