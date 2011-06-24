@@ -1,6 +1,8 @@
 import urllib2
 import re
 import sqlite3
+import datetime
+
 
 """
 1.access by type erf and findall resourcetypes
@@ -20,11 +22,24 @@ detail = 'cmd=detail'
 #open each resource 'detail' page in erf & do something!
 res_ids = get_resource_ids() 
 erf_dict = {}
-repsonse = urllib2.urlopen('http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=1795')
+response = urllib2.urlopen('http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=1795')
 html = response.read()
+erf_tup = re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)
+sub_list = []
+core_list = []
+erf_dict = dict(erf_tup)
 
+for i in erf_tup:
+     if i[0] == 'Subject:':
+          sub_list.append(i[1])
+          erf_dict['subject'] = sub_list
+     if i[0] == 'Core Subject:':
+          core_list.append(i[1])
+          erf_dcit['core_subject'] = core_list
+     
+        
 #for id in res_ids:
-if re.search('<B>(Title):</B>\s([\w\s\d]+)<BR>', html):
+if re.search('<B>(Title):</B>\s(.*?)<BR>', html):
     print('match title')
 #if match <B>(URL):</B> <A HREF="(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)">
 if re.search('<B>(Resource Type):</B>\s(.*?)<BR>', html):
