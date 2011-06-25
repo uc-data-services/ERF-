@@ -36,6 +36,9 @@ for i in erf_tup:
      if i[0] == 'Core Subject:':
           core_list.append(i[1])
           erf_dcit['core_subject'] = core_list
+     if i[0] == 'Resource type:':
+          res_list.append(i[1])
+          erf_dict['resource_type'] = res_list
      
         
 #for id in res_ids:
