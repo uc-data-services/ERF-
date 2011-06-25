@@ -29,6 +29,8 @@ sub_list = []
 core_list = []
 erf_dict = dict(erf_tup)
 
+## below code works for Subject: case
+erf_dict = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Subject:"]) for i in erf_tup if i[0] == "Subject:")
 for i in erf_tup:
      if i[0] == 'Subject:':
           sub_list.append(i[1])
