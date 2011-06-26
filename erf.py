@@ -29,8 +29,17 @@ sub_list = []
 core_list = []
 erf_dict = dict(erf_tup)
 
-## below code works for Subject: case
-erf_dict = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Subject:"]) for i in erf_tup if i[0] == "Subject:")
+## below code works for the repeating
+erf_dict = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Subject:"]) 
+                for i in erf_tup if i[0] == "Subject:")
+erf_core = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Core subject:"]) 
+                for i in erf_tup if i[0] == "Core subject:")
+erf_resource = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Resource Type:"]) 
+                for i in erf_tup if i[0] == "Resource Type:")
+erf_dict = dict((i[0].lower().strip(':'), i[1]) for i in erf_tup if not i[0] == "Resource Type:" or "Subject:" or "Core subject:")
+
+erf_dict.update()
+
 for i in erf_tup:
      if i[0] == 'Subject:':
           sub_list.append(i[1])
