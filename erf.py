@@ -20,53 +20,19 @@ search_res_types = 'cmd=searchResType&'
 detail = 'cmd=detail'
 
 #open each resource 'detail' page in erf & do something!
+#creating a dict
+# need to abstract the url handling and opening into a function
+# need to 
 res_ids = get_resource_ids() 
-erf_dict = {}
 response = urllib2.urlopen('http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=1795')
 html = response.read()
-erf_tup = re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)
-sub_list = []
-core_list = []
-erf_dict = dict(erf_tup)
+erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
+erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_tup]
+erf_dict = dict(erf_list)
+erf_dict['subject'] = [i[1] for i in erf_tup if i[0] == "Subject:"]
+erf_dict['core_subject'] = [i[1] for i in erf_tup if i[0] == "Core subject:"]
+erf_dict['resource_type'] = [i[1] for i in erf_tup if i[0] == "Resource Type:"]
 
-## below code works for the repeating
-erf_dict = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Subject:"]) 
-                for i in erf_tup if i[0] == "Subject:")
-erf_core = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Core subject:"]) 
-                for i in erf_tup if i[0] == "Core subject:")
-erf_resource = dict((i[0].lower().strip(':'), [i[1] for i in erf_tup if i[0] == "Resource Type:"]) 
-                for i in erf_tup if i[0] == "Resource Type:")
-erf_dict = dict((i[0].lower().strip(':'), i[1]) for i in erf_tup if not i[0] == "Resource Type:" or "Subject:" or "Core subject:")
-
-erf_dict.update()
-
-for i in erf_tup:
-     if i[0] == 'Subject:':
-          sub_list.append(i[1])
-          erf_dict['subject'] = sub_list
-     if i[0] == 'Core Subject:':
-          core_list.append(i[1])
-          erf_dcit['core_subject'] = core_list
-     if i[0] == 'Resource type:':
-          res_list.append(i[1])
-          erf_dict['resource_type'] = res_list
-     
-        
-#for id in res_ids:
-if re.search('<B>(Title):</B>\s(.*?)<BR>', html):
-    print('match title')
-#if match <B>(URL):</B> <A HREF="(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)">
-if re.search('<B>(Resource Type):</B>\s(.*?)<BR>', html):
-    print('match resource type')
-if re.search'<B>(Core subject):</B>\s(.*?)<BR>', html):
-    print('match Core subject')
-if re.search('<B>(Subject):</B>\s(.*?)<BR>', html):
-    print('match subject')
-if re.search('<B>(Access):</B>\s(.*?)<BR>', html):
-    print('match access')
-if re.search('<B>(Text):</B>\s(.*?)<BR>', html): 
-    print('match full text')
-#<B>(Brief description):</B> (.*?)<BR> 
 
 def get_resource_ids():
     """function that returns a unique set of ERF resource ids open erfby 
