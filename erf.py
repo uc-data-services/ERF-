@@ -27,11 +27,11 @@ res_ids = get_resource_ids()
 response = urllib2.urlopen('http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=1795')
 html = response.read()
 erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
-erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_tup]
+erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
 erf_dict = dict(erf_list)
-erf_dict['subject'] = [i[1] for i in erf_tup if i[0] == "Subject:"]
-erf_dict['core_subject'] = [i[1] for i in erf_tup if i[0] == "Core subject:"]
-erf_dict['resource_type'] = [i[1] for i in erf_tup if i[0] == "Resource Type:"]
+erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "Subject:"]
+erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "Core subject:"]
+erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "Resource Type:"]
 
 
 def get_resource_ids():
