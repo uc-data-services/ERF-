@@ -29,7 +29,7 @@ html = response.read()
 erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
 erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
 erf_dict = dict(erf_list)
-erf_dict['resource_id'] = int('resId=1795re '.lstrip("resId=")) #need to pull out resId from res_ids
+erf_dict['resource_id'] = int('resId=1795'.lstrip("resId=")) #need to pull out resId from res_ids
 erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "Subject:"]
 erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "Core subject:"]
 erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "Resource Type:"]
