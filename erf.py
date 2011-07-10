@@ -30,14 +30,40 @@ erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
 erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
 erf_dict = dict(erf_list)
 erf_dict['resource_id'] = int('resId=1795'.lstrip("resId=")) #need to pull out resId from res_ids
-erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "Subject:"]
-erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "Core subject:"]
-erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "Resource Type:"]
+erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
+erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
+erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
+
+# change working dir for dreampie
+os.chdir('/home/tim/Dropbox/ERF-/')
 
 connection = sqlite3.connect('erf.sqlite')
 cursor = connection.cursor()
-
-
+resource_stmt = "INSERT INTO resource (title, resource_id, access, description) VALUES (?,?,?,?)"
+#need to figure out fields that are always in every erf record for the resource table
+cursor.execute(resource_stmt, (erf_dict['title'], erf_dict['resource_id'],erf_dict['access'],erf_dict['brief_description']))
+#then handle the optional ones for resource, e.g. alt_title, etc.
+#capture the lastrowid for use in bridge table b/t resource & subject
+# create a list out of subject
+rid = cursor.lastrowid
+erf_subj = erf_dict['subject']
+erf_core = erf_dict['core_subject']
+'''for each term in subject do: insert into subject table, insert rid, sid into r_s_bridge, add logic to test is member of 
+core_subject and if is insert 1 into r_s_bridge core_subject bool
+need to handle if subj_term in table already, if so capture id so can add sid to r_s_bridge table'''
+subject_stmt = "INSERT INTO subject (subject) VALUES (?)"
+for term in erf_subj:
+    cursor.execute(subject_stmt, (term,))
+    connection.commit()
+    sid = cursor.lastrowid
+    is_core = 0
+    rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
+    for erf_core_term in erf_core:
+        if erf_core_term == term:
+            is_core = 1
+    cursor.execute(rs_bridge_stmt, (rid,sid, is_core))
+    connection.commit()
+    
 def get_resource_ids():
     """function that returns a unique set of ERF resource ids open erfby 
     type page & pull out all resTypeId=\d+ as array"""

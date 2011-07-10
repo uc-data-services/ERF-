@@ -12,8 +12,8 @@ proj.directory-list = [{'dirloc': loc('.'),
                         'watch_for_changes': True}]
 proj.file-type = 'normal'
 [user attributes]
-cache.last-mime-type = {loc('unknown:<untitled> #2'): 'text/x-diff',
-                        loc('unknown:<untitled> #1'): 'text/x-diff',
+cache.last-mime-type = {loc('unknown:<untitled> #1'): 'text/x-diff',
+                        loc('unknown:<untitled> #2'): 'text/x-diff',
                         loc('unknown:<untitled> #3'): 'text/x-diff'}
 guimgr.overall-gui-state = {'windowing-policy': 'combined-window',
                             'windows': [{'name': 'D1Nq8mQBTGusG9G8Sn1X3m50W4'\
@@ -393,12 +393,12 @@ guimgr.overall-gui-state = {'windowing-policy': 'combined-window',
         15),
         'current-loc': loc('erf.py'),
         'editor-states': {loc('erf.py'): {'attrib-starts': [],
-        'first-line': 16,
+        'first-line': 41,
         'folded-linenos': [],
-        'sel-line': 27,
-        'sel-line-start': 1029,
-        'selection_end': 1051,
-        'selection_start': 1051}},
+        'sel-line': 50,
+        'sel-line-start': 2256,
+        'selection_end': 2294,
+        'selection_start': 2294}},
         'has-focus': True},
                                'open_files': [u'erf.py']},
         'split_percents': {0: 0.42662473794549266},
