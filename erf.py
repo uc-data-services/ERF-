@@ -3,7 +3,6 @@ import re
 import sqlite3
 import datetime
 
-
 """
 1.access by type erf and findall resourcetypes
 2.open each resourceid pages and findall resourceIDs, we also will need to persist these ids in DB, but might
@@ -39,9 +38,10 @@ os.chdir('/home/tim/Dropbox/ERF-/')
 
 connection = sqlite3.connect('erf.sqlite')
 cursor = connection.cursor()
-resource_stmt = "INSERT INTO resource (title, resource_id, access, description) VALUES (?,?,?,?)"
+resource_stmt = "INSERT INTO resource (title, resource_id, access, description, url) VALUES (?,?,?,?,?)"
 #need to figure out fields that are always in every erf record for the resource table
-cursor.execute(resource_stmt, (erf_dict['title'], erf_dict['resource_id'],erf_dict['access'],erf_dict['brief_description']))
+cursor.execute(resource_stmt, (erf_dict['title'], erf_dict['resource_id'],erf_dict['access'],erf_dict['brief_description'], erf_dict['url']))
+connection.commit()
 #then handle the optional ones for resource, e.g. alt_title, etc.
 #capture the lastrowid for use in bridge table b/t resource & subject
 # create a list out of subject
@@ -53,10 +53,15 @@ core_subject and if is insert 1 into r_s_bridge core_subject bool
 need to handle if subj_term in table already, if so capture id so can add sid to r_s_bridge table'''
 subject_stmt = "INSERT INTO subject (subject) VALUES (?)"
 for term in erf_subj:
-    cursor.execute(subject_stmt, (term,))
-    connection.commit()
-    sid = cursor.lastrowid
-    is_core = 0
+    cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))    
+    is_term = cursor.fetchone()[0]
+    if is_term is not None:
+        sid = is_term[0]
+    else:    
+        cursor.execute(subject_stmt, (term,))
+        connection.commit()
+        sid = cursor.lastrowid
+        is_core = 0
     rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
     for erf_core_term in erf_core:
         if erf_core_term == term:
