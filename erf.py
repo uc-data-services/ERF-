@@ -48,10 +48,12 @@ connection.commit()
 rid = cursor.lastrowid
 erf_subj = erf_dict['subject']
 erf_core = erf_dict['core_subject']
+erf_type = erf_dict['resource_type']
 '''for each term in subject do: insert into subject table, insert rid, sid into r_s_bridge, add logic to test is member of 
 core_subject and if is insert 1 into r_s_bridge core_subject bool
 need to handle if subj_term in table already, if so capture id so can add sid to r_s_bridge table'''
-subject_stmt = "INSERT INTO subject (subject) VALUES (?)"
+subject_stmt = "INSERT INTO subject (term) VALUES (?)"
+core_stmt = "INSERT INTO type (type) VALUES (?)"
 for term in erf_subj:
     cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))    
     is_term = cursor.fetchone()[0]
@@ -68,6 +70,9 @@ for term in erf_subj:
             is_core = 1
     cursor.execute(rs_bridge_stmt, (rid,sid, is_core))
     connection.commit()
+for term in erf_type:
+    if is_type is not None:
+        tid = 
     
 def get_resource_ids():
     """function that returns a unique set of ERF resource ids open erfby 
