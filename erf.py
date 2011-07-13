@@ -32,48 +32,67 @@ erf_dict['resource_id'] = int('resId=1795'.lstrip("resId=")) #need to pull out r
 erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
 erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
 erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
+add_to_db(erf_dict)
 
-# change working dir for dreampie
-os.chdir('/home/tim/Dropbox/ERF-/')
-
-connection = sqlite3.connect('erf.sqlite')
-cursor = connection.cursor()
-resource_stmt = "INSERT INTO resource (title, resource_id, access, description, url) VALUES (?,?,?,?,?)"
-#need to figure out fields that are always in every erf record for the resource table
-cursor.execute(resource_stmt, (erf_dict['title'], erf_dict['resource_id'],erf_dict['access'],erf_dict['brief_description'], erf_dict['url']))
-connection.commit()
-#then handle the optional ones for resource, e.g. alt_title, etc.
-#capture the lastrowid for use in bridge table b/t resource & subject
-# create a list out of subject
-rid = cursor.lastrowid
-erf_subj = erf_dict['subject']
-erf_core = erf_dict['core_subject']
-erf_type = erf_dict['resource_type']
-'''for each term in subject do: insert into subject table, insert rid, sid into r_s_bridge, add logic to test is member of 
-core_subject and if is insert 1 into r_s_bridge core_subject bool
-need to handle if subj_term in table already, if so capture id so can add sid to r_s_bridge table'''
-subject_stmt = "INSERT INTO subject (term) VALUES (?)"
-core_stmt = "INSERT INTO type (type) VALUES (?)"
-for term in erf_subj:
-    cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))    
-    is_term = cursor.fetchone()[0]
-    if is_term is not None:
-        sid = is_term[0]
-    else:    
-        cursor.execute(subject_stmt, (term,))
-        connection.commit()
-        sid = cursor.lastrowid
-        is_core = 0
-    rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
-    for erf_core_term in erf_core:
-        if erf_core_term == term:
-            is_core = 1
-    cursor.execute(rs_bridge_stmt, (rid,sid, is_core))
-    connection.commit()
-for term in erf_type:
-    if is_type is not None:
-        tid = 
+def add_to_db(erf_dict):
+    # change working dir for dreampie
+    os.chdir('/home/tim/Dropbox/ERF-/')
     
+    connection = sqlite3.connect('erf.sqlite')
+    cursor = connection.cursor()
+    resource_stmt = "INSERT INTO resource (title, resource_id, access, description, url) VALUES (?,?,?,?,?)"
+    #need to figure out fields that are always in every erf record for the resource table
+    cursor.execute(resource_stmt, (erf_dict['title'], 
+                                   erf_dict['resource_id'],
+                                   erf_dict['text'],
+                                   erf_dict['brief_description'], 
+                                   erf_dict['publication_dates_covered'],
+                                   erf_dict['licensing_restriction'],
+                                   erf_dict['last_modified'],
+                                   erf_dict['url']))
+    
+    connection.commit()
+    #then handle the optional ones for resource, e.g. alt_title, etc.
+    #capture the lastrowid for use in bridge table b/t resource & subject
+    # create a list out of subject
+    rid = cursor.lastrowid
+    erf_subj = erf_dict['subject']
+    erf_core = erf_dict['core_subject']
+    erf_type = erf_dict['resource_type']
+    '''for each term in subject do: insert into subject table, insert rid, sid into r_s_bridge, add logic to test is member of 
+    core_subject and if is insert 1 into r_s_bridge core_subject bool
+    need to handle if subj_term in table already, if so capture id so can add sid to r_s_bridge table'''
+    subject_stmt = "INSERT INTO subject (term) VALUES (?)"
+    type_stmt = "INSERT INTO type (type) VALUES (?)"
+    rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
+    rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, sid) VALUES (?,?)"
+    for term in erf_subj:
+        cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))    
+        is_term = cursor.fetchone()
+        if is_term is not None:
+            sid = is_term[0]
+        else:    
+            cursor.execute(subject_stmt, (term,))
+            connection.commit()
+            sid = cursor.lastrowid
+            is_core = 0
+        for erf_core_term in erf_core:
+            if erf_core_term == term:
+                is_core = 1
+        cursor.execute(rs_bridge_stmt, (rid,sid, is_core))
+        connection.commit()
+    for term in erf_type:
+        cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))
+        is_type = cursor.fetchone()
+        if is_type is not None:
+            tid = is_type
+        else:
+            cursor.execute(type_stmt, (term,))
+            connection.commit()
+            tid = cursor.lastrowid
+        cursor.execute(rt_bridge_stmt, (rid, sid))
+        connection.commit()
+    #decide whether or not to save alternate title
 def get_resource_ids():
     """function that returns a unique set of ERF resource ids open erfby 
     type page & pull out all resTypeId=\d+ as array"""
