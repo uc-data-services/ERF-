@@ -37,7 +37,9 @@ if 'text' not in erf_dict:
 if 'publication_dates_covered' not in erf_dict:
     erf_dict['publication_dates_covered'] = 'NULL'
 if 'alternative_title' not in erf_dict:
-    erf_dict['alternative_title' = 'NULL'
+    erf_dict['alternative_title'] = 'NULL'
+if 'licensing_restriction' not in erf_dict:
+    erf_dict['licensing_restriction']='NULL'
 add_to_db(erf_dict)
 
 def add_to_db(erf_dict):
@@ -54,7 +56,7 @@ def add_to_db(erf_dict):
                                    erf_dict['brief_description'], 
                                    erf_dict['publication_dates_covered'],
                                    erf_dict['licensing_restriction'],
-                                   erf_dict['last_modified'],
+                                   erf_dict['record_last_modified'],
                                    erf_dict['url'],
                                    erf_dict['alternative_title']))
     
@@ -72,7 +74,8 @@ def add_to_db(erf_dict):
     subject_stmt = "INSERT INTO subject (term) VALUES (?)"
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
-    rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, sid) VALUES (?,?)"
+    rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
+    is_core = 0
     for term in erf_subj:
         cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))    
         is_term = cursor.fetchone()
@@ -82,22 +85,21 @@ def add_to_db(erf_dict):
             cursor.execute(subject_stmt, (term,))
             connection.commit()
             sid = cursor.lastrowid
-            is_core = 0
         for erf_core_term in erf_core:
             if erf_core_term == term:
                 is_core = 1
         cursor.execute(rs_bridge_stmt, (rid,sid, is_core))
         connection.commit()
     for term in erf_type:
-        cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))
+        cursor.execute("SELECT tid FROM type WHERE type=?", (term,))
         is_type = cursor.fetchone()
         if is_type is not None:
-            tid = is_type
+            tid = is_type[0]
         else:
             cursor.execute(type_stmt, (term,))
             connection.commit()
             tid = cursor.lastrowid
-        cursor.execute(rt_bridge_stmt, (rid, sid))
+        cursor.execute(rt_bridge_stmt, (rid, tid))
         connection.commit()
     #decide whether or not to save alternate title
 def get_resource_ids():
