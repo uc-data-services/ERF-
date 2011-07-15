@@ -32,6 +32,12 @@ erf_dict['resource_id'] = int('resId=1795'.lstrip("resId=")) #need to pull out r
 erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
 erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
 erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
+if 'text' not in erf_dict:
+    erf_dict['text'] = 'NULL'
+if 'publication_dates_covered' not in erf_dict:
+    erf_dict['publication_dates_covered'] = 'NULL'
+if 'alternative_title' not in erf_dict:
+    erf_dict['alternative_title' = 'NULL'
 add_to_db(erf_dict)
 
 def add_to_db(erf_dict):
@@ -40,7 +46,7 @@ def add_to_db(erf_dict):
     
     connection = sqlite3.connect('erf.sqlite')
     cursor = connection.cursor()
-    resource_stmt = "INSERT INTO resource (title, resource_id, access, description, url) VALUES (?,?,?,?,?)"
+    resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url, alternative_title) VALUES (?,?,?,?,?,?,?,?,?)"
     #need to figure out fields that are always in every erf record for the resource table
     cursor.execute(resource_stmt, (erf_dict['title'], 
                                    erf_dict['resource_id'],
@@ -49,7 +55,8 @@ def add_to_db(erf_dict):
                                    erf_dict['publication_dates_covered'],
                                    erf_dict['licensing_restriction'],
                                    erf_dict['last_modified'],
-                                   erf_dict['url']))
+                                   erf_dict['url'],
+                                   erf_dict['alternative_title']))
     
     connection.commit()
     #then handle the optional ones for resource, e.g. alt_title, etc.
