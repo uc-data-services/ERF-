@@ -2,6 +2,7 @@ import urllib2
 import re
 import sqlite3
 import datetime
+import os
 
 """
 1.access by type erf and findall resourcetypes
@@ -27,11 +28,13 @@ response = urllib2.urlopen('http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ER
 html = response.read()
 erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
 erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
+erf_dict = {'title': '','resource_id': '','text': '', 'brief_description': '','publication_dates_covered': '','licensing_restriction': '','last_modified': '','last_modified':'', 'url': ''}
 erf_dict = dict(erf_list)
 erf_dict['resource_id'] = int('resId=1795'.lstrip("resId=")) #need to pull out resId from res_ids
 erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
 erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
 erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
+if 
 add_to_db(erf_dict)
 
 def add_to_db(erf_dict):
@@ -40,7 +43,7 @@ def add_to_db(erf_dict):
     
     connection = sqlite3.connect('erf.sqlite')
     cursor = connection.cursor()
-    resource_stmt = "INSERT INTO resource (title, resource_id, access, description, url) VALUES (?,?,?,?,?)"
+    resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
     #need to figure out fields that are always in every erf record for the resource table
     cursor.execute(resource_stmt, (erf_dict['title'], 
                                    erf_dict['resource_id'],
