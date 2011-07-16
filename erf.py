@@ -23,7 +23,15 @@ detail = 'cmd=detail'
 #creating a dict
 # need to abstract the url handling and opening into a function
 # need to 
+
+# change working dir for dreampie
+# investigate putting connection object in a function or class
+os.chdir('/home/tim/Dropbox/ERF-/')
+connection = sqlite3.connect('erf.sqlite')
+cursor = connection.cursor()
 res_ids = get_resource_ids() 
+
+#need to wrap below in fucntion & for each resid, pull out urllib stuff into function call
 response = urllib2.urlopen('http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=1795')
 html = response.read()
 erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
@@ -44,13 +52,11 @@ if 'licensing_restriction' not in erf_dict:
 add_to_db(erf_dict)
 
 def add_to_db(erf_dict):
-    # change working dir for dreampie
-    os.chdir('/home/tim/Dropbox/ERF-/')
-    
-    connection = sqlite3.connect('erf.sqlite')
-    cursor = connection.cursor()
-    resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url, alternative_title) VALUES (?,?,?,?,?,?,?,?,?)"
-    #need to figure out fields that are always in every erf record for the resource table
+    '''takes a dictionary representation of an ERF record and inserts into a sqlite3 db'''
+    resource_stmt = """INSERT INTO resource 
+                    (title, resource_id, text, description, coverage, 
+                     licensing, last_modified, url, alternative_title) 
+                     VALUES (?,?,?,?,?,?,?,?,?)"""
     cursor.execute(resource_stmt, (erf_dict['title'], 
                                    erf_dict['resource_id'],
                                    erf_dict['text'],
@@ -59,16 +65,14 @@ def add_to_db(erf_dict):
                                    erf_dict['licensing_restriction'],
                                    erf_dict['record_last_modified'],
                                    erf_dict['url'],
-                                   erf_dict['alternative_title']))
+                                   erf_dict['alternative_title'])) # adding fields to the resource table in db
     
     connection.commit()
-    #then handle the optional ones for resource, e.g. alt_title, etc.
     #capture the lastrowid for use in bridge table b/t resource & subject
-    # create a list out of subject
     rid = cursor.lastrowid
-    erf_subj = erf_dict['subject']
-    erf_core = erf_dict['core_subject']
-    erf_type = erf_dict['resource_type']
+    erf_subj = erf_dict['subject'] # create a list out of subject terms
+    erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+    erf_type = erf_dict['resource_type'] # create a list out of types
     '''for each term in subject do: insert into subject table, insert rid, sid into r_s_bridge, add logic to test is member of 
     core_subject and if is insert 1 into r_s_bridge core_subject bool
     need to handle if subj_term in table already, if so capture id so can add sid to r_s_bridge table'''
@@ -76,7 +80,7 @@ def add_to_db(erf_dict):
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
-    is_core = 0
+    is_core = 0 #initialize is_core to false
     for term in erf_subj:
         cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))    
         is_term = cursor.fetchone()
@@ -103,6 +107,9 @@ def add_to_db(erf_dict):
         cursor.execute(rt_bridge_stmt, (rid, tid))
         connection.commit()
     #decide whether or not to save alternate title
+
+def create_db_tables():
+    
 def get_resource_ids():
     """function that returns a unique set of ERF resource ids open erfby 
     type page & pull out all resTypeId=\d+ as array"""
