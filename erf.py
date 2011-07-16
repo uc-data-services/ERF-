@@ -2,6 +2,7 @@ import urllib2
 import re
 import sqlite3
 import datetime
+import os
 
 """
 1.access by type erf and findall resourcetypes
