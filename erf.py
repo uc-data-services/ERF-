@@ -28,9 +28,6 @@ detail = 'cmd=detail'
 # investigate putting connection object in a function or class
 os.chdir('/home/tim/Dropbox/ERF-/')
 db_filename = 'erf.sqlite'
-connection = sqlite3.connect('erf.sqlite')
-schema = 'erf_schema.sql'
-cursor = connection.cursor()
 res_ids = get_resource_ids() 
 
 #need to wrap below in fucntion & for each resid, pull out urllib stuff into function call
@@ -51,18 +48,22 @@ if 'alternative_title' not in erf_dict:
     erf_dict['alternative_title'] = 'NULL'
 if 'licensing_restriction' not in erf_dict:
     erf_dict['licensing_restriction']='NULL'
+create_db_tables()
 add_to_db(erf_dict)
 
 def create_db_tables():
+    '''Creates tables for in erf.sqlite, if tables already exist, will drop them.'''
+    schema = 'erf_schema.sql'
     with sqlite3.connect(db_filename) as conn:
         print 'Creating schema'
         with open(schema, 'rt') as f:
             schema = f.read()
         conn.executescript(schema)
 
-def add_to_db(erf_dict):
-    '''takes a dictionary representation of an ERF record and inserts into a sqlite3 db'''
+def add_resource_to_db(erf_dictionary):
+    '''Takes a dictionary representation of an ERF record and inserts into a sqlite3 db'''
     with sqlite3.connect(db_filename) as conn:
+        c = conn.cursor()
         resource_stmt = """INSERT INTO resource 
                         (title, resource_id, text, description, coverage, 
                          licensing, last_modified, url, alternative_title) 
@@ -78,8 +79,9 @@ def add_to_db(erf_dict):
                                        erf_dict['alternative_title'])) # adding fields to the resource table in db
         
         conn.commit()
+        
         #capture the lastrowid for use in bridge table b/t resource & subject
-        rid = conn.lastrowid()
+        rid = c.lastrowid()
         erf_subj = erf_dict['subject'] # create a list out of subject terms
         erf_core = erf_dict['core_subject'] # create a list out of core subject terms
         erf_type = erf_dict['resource_type'] # create a list out of types
@@ -92,34 +94,33 @@ def add_to_db(erf_dict):
         rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
         is_core = 0 #initialize is_core to false
         for term in erf_subj:
-            cursor.execute("SELECT sid FROM subject WHERE term=?", (term,))    
-            is_term = cursor.fetchone()
+            conn.execute("SELECT sid FROM subject WHERE term=?", (term,))    
+            is_term = c.fetchone()
             if is_term is not None:
                 sid = is_term[0]
             else:    
-                cursor.execute(subject_stmt, (term,))
-                connection.commit()
-                sid = cursor.lastrowid
+                conn.execute(subject_stmt, (term,))
+                conn.commit()
+                sid = c.lastrowid
             for erf_core_term in erf_core:
                 if erf_core_term == term:
                     is_core = 1
-            cursor.execute(rs_bridge_stmt, (rid,sid, is_core))
-            connection.commit()
+            conn.execute(rs_bridge_stmt, (rid,sid, is_core))
+            conn.commit()
         for term in erf_type:
-            cursor.execute("SELECT tid FROM type WHERE type=?", (term,))
-            is_type = cursor.fetchone()
+            conn.execute("SELECT tid FROM type WHERE type=?", (term,))
+            is_type = c.fetchone()
             if is_type is not None:
                 tid = is_type[0]
             else:
-                cursor.execute(type_stmt, (term,))
-                connection.commit()
-                tid = cursor.lastrowid
-            cursor.execute(rt_bridge_stmt, (rid, tid))
-            connection.commit()
-        #decide whether or not to save alternate title
+                conn.execute(type_stmt, (term,))
+                conn.commit()
+                tid = c.lastrowid
+            conn.execute(rt_bridge_stmt, (rid, tid))
+            conn.commit()
 
 def get_resource_ids():
-    """function that returns a unique set of ERF resource ids open erfby 
+    """Returns a unique set of ERF resource ids open erfby 
     type page & pull out all resTypeId=\d+ as array"""
     response = urllib2.urlopen(baseurl+all_res_types)
     html = response.read()
