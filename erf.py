@@ -19,7 +19,7 @@ all_res_types = 'cmd=allResTypes'
 search_res_types = 'cmd=searchResType&'
 detail = 'cmd=detail&'
 #resid = 'resId=3446' #need to remove when put in resid loop
-os.chdir('/home/tim/Dropbox/ERF-/')
+#os.chdir('/home/tim/Dropbox/ERF-/')
 db_filename = 'erf.sqlite'
 RETRY_DELAY = 2
 
