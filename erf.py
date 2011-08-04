@@ -1,3 +1,5 @@
+#!/usr/bin/evn python
+
 import urllib2
 import re
 import sqlite3
@@ -18,7 +20,7 @@ baseurl = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 all_res_types = 'cmd=allResTypes'
 search_res_types = 'cmd=searchResType&'
 detail = 'cmd=detail&'
-#resid = 'resId=3446' #need to remove when put in resid loop
+#resid = 'resId=3446 ' #need to remove when put in resid loop
 #os.chdir('/home/tim/Dropbox/ERF-/')
 db_filename = 'erf.sqlite'
 RETRY_DELAY = 2
@@ -35,7 +37,8 @@ def parse_page(html):
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
     erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
-    erf_dict['alternate_title'] = [i[1] for i in erf_list if i[0] == "alternate_title"]
+    if [i[1] for i in erf_list if i[0] == "alternate_title"]:
+        erf_dict['alternate_title'] = [i[1] for i in erf_list if i[0] == "alternate_title"]
     if 'text' not in erf_dict:
         erf_dict['text'] = 'NULL'
     if 'publication_dates_covered' not in erf_dict:
@@ -43,8 +46,7 @@ def parse_page(html):
     if 'licensing_restriction' not in erf_dict:
         erf_dict['licensing_restriction']='NULL'
     if 'brief_description' not in erf_dict:
-        erf_dict['brief_description'] = 'NULL'
-    
+        erf_dict['brief_description'] = 'NULL'    
     return erf_dict
 
 
@@ -61,10 +63,8 @@ def get_resource_ids():
     """Returns a unique set of ERF resource ids open erf by type page & pull out all resTypeId=\d+ as array"""
     response = urllib2.urlopen(baseurl+all_res_types)
     html = response.read()
-    restypeid = re.findall('resTypeId=\d+', html)
-    
-    resids = []
-    
+    restypeid = re.findall('resTypeId=\d+', html) 
+    resids = [] 
     #Open each resTypeId page & capture the indiviual ERF resource ids (resIds)
     for id in restypeid:
         typeurl = baseurl + search_res_types + str(id)
@@ -72,9 +72,7 @@ def get_resource_ids():
         typehtml = typeresponse.read()
         resid_part = re.findall('resId=\d+', typehtml)
         resids.extend(resid_part)
-
     unique_resids = set(resids)
-
     return(unique_resids)
 
 def natsort(list_):
@@ -89,8 +87,8 @@ create_db_tables() #currently drops existing tables and creates them anew
 
 conn = sqlite3.connect(db_filename)
 c = conn.cursor()
-res_ids = natsort(get_resource_ids())
-#res_ids = ['resId=1299','resId=3328']
+#res_ids = natsort(get_resource_ids())
+res_ids = ['resId=1299','resId=3328']
 for id in res_ids:
     try:
    
@@ -153,9 +151,9 @@ for id in res_ids:
                 tid = c.lastrowid
             c.execute(rt_bridge_stmt, (rid, tid))
             conn.commit()
-        if alternate_title in erf_dict: 
-            erf_alt = erf_dict['alternative_title']
-            alt_title_stmt = "INSERT INTO alternative_title (title, rid) VALUES (?,?)"
+        if "alternate_title" in erf_dict: 
+            erf_alt = erf_dict['alternate_title']
+            alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
             for term in erf_alt:
                 c.execute(alt_title_stmt, (term, rid))
            
@@ -167,3 +165,4 @@ for id in res_ids:
         if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
             print str(err)
             time.sleep(RETRY_DELAY)
+conn.close()
