@@ -87,8 +87,8 @@ create_db_tables() #currently drops existing tables and creates them anew
 
 conn = sqlite3.connect(db_filename)
 c = conn.cursor()
-#res_ids = natsort(get_resource_ids())
-res_ids = ['resId=1299','resId=3328']
+res_ids = natsort(get_resource_ids())
+#res_ids = ['resId=1299','resId=3328']
 for id in res_ids:
     try:
    
@@ -99,10 +99,7 @@ for id in res_ids:
         last_mod_stmt = "SELECT resource_id, last_modified FROM resource" #get the resource_id & last_modified date from local db
         c.execute(last_mod_stmt)
         erf_current = c.fetchall() #make a 2-tuple from db query for resource_id & last_modified_date from local db
-        resource_stmt = """INSERT INTO resource 
-                        (title, resource_id, text, description, coverage, 
-                         licensing, last_modified, url) 
-                         VALUES (?,?,?,?,?,?,?,?)"""
+        resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
         c.execute(resource_stmt, (erf_dict['title'], 
                                        erf_dict['resource_id'],
                                        erf_dict['text'],
