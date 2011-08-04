@@ -10,4 +10,4 @@ CREATE TABLE "resource" ("rid" INTEGER PRIMARY KEY  NOT NULL, "title" TEXT,"reso
                 "description" TEXT,"coverage" TEXT DEFAULT (NULL), "licensing" TEXT,"last_modified" DATETIME,"url" TEXT,);             
 CREATE TABLE "subject" ("sid" INTEGER PRIMARY KEY  NOT NULL , "term" TEXT UNIQUE );
 CREATE TABLE "type" ("tid" INTEGER PRIMARY KEY  NOT NULL , "type" TEXT UNIQUE);
-CREATE TABLE "alternate_title" ("aid" INTEGER PRIMARY KEY  NOT NULL , "title" TEXT DEFAULT NULL, "rid" INTEGER)
+CREATE TABLE "alternate_title" ("aid" INTEGER PRIMARY KEY  NOT NULL , "title" TEXT DEFAULT NULL, "rid" INTEGER);
