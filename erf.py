@@ -82,6 +82,33 @@ def natsort(list_):
     # undecorate
     return [ i[1] for i in tmp ]
 
+def get_local_resids_and_update_dates():
+    '''Gets the resIds & last update dates from the local sqlite database'''
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    last_mod_stmt = "SELECT resource_id, last_modified FROM resource" #get the resource_id & last_modified date from local db
+    c.execute(last_mod_stmt)
+    local_resids_and_updates = c.fetchall() #make a 2-tuple from db query for resource_id & last_modified_date from local db
+    conn.close()
+    return local_resids_and_updates
+
+def erf_resids_and_lastupdates():
+    '''Returns a list of ERF resIds and last update dates.'''
+    erf_res_ids = get_resource_ids()
+    erf_res_ids_last_mod = []
+    for ids in erf_res_ids:
+        response = urllib2.urlopen(baseurl+detail+id)
+        html = response.read()
+        last_update = re.search('<B>Record last modified:</B>\s(.*?)<BR>', html).group(1)
+        erf_res_ids_last_mod.append((id, last_update)) #need to add as tuple
+    return erf_res_ids_last_mod
+
+def resids_needing_updating_and_adding():
+    '''returns a list resids that need updating or adding'''
+    local_resids_and_dates = get_local_resids_and_update_dates()
+    erf_res_ids_and_dates = erf_resids_and_lastupdates()
+    update_and_new = set(local_resids_and_dates)-set(erf_res_ids_and_dates)
+    
 create_db_tables() #currently drops existing tables and creates them anew
 #parts of the ERF urls for global use
 
@@ -96,9 +123,6 @@ for id in res_ids:
         html = response.read()
         erf_dict = parse_page(html)
         erf_dict['resource_id'] = int(id.lstrip("resId=")) #need to pull out current resId from res_ids & add to dict
-        last_mod_stmt = "SELECT resource_id, last_modified FROM resource" #get the resource_id & last_modified date from local db
-        c.execute(last_mod_stmt)
-        erf_current = c.fetchall() #make a 2-tuple from db query for resource_id & last_modified_date from local db
         resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
         c.execute(resource_stmt, (erf_dict['title'], 
                                        erf_dict['resource_id'],
