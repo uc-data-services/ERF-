@@ -92,22 +92,22 @@ def get_local_resids_and_update_dates():
     conn.close()
     return local_resids_and_updates
 
-def erf_resids_and_lastupdates():
+def erf_resids_and_lastupdates(erf_res_ids):
     '''Returns a list of ERF resIds and last update dates.'''
-    erf_res_ids = get_resource_ids()
     erf_res_ids_last_mod = []
     for ids in erf_res_ids:
-        response = urllib2.urlopen(baseurl+detail+id)
+        response = urllib2.urlopen(baseurl+detail+ids)
         html = response.read()
         last_update = re.search('<B>Record last modified:</B>\s(.*?)<BR>', html).group(1)
         erf_res_ids_last_mod.append((id, last_update)) #need to add as tuple
     return erf_res_ids_last_mod
 
-def resids_needing_updating_and_adding():
+def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
     '''returns a list resids that need updating or adding'''
-    local_resids_and_dates = get_local_resids_and_update_dates()
-    erf_res_ids_and_dates = erf_resids_and_lastupdates()
+    #local_resids_and_dates = get_local_resids_and_update_dates()
+    #erf_res_ids_and_dates = erf_resids_and_lastupdates()
     update_and_new = set(local_resids_and_dates)-set(erf_res_ids_and_dates)
+    return update_and_new
     
 create_db_tables() #currently drops existing tables and creates them anew
 #parts of the ERF urls for global use
