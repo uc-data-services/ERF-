@@ -72,7 +72,7 @@ def get_resource_ids():
         typehtml = typeresponse.read()
         resid_part = re.findall('resId=\d+', typehtml)
         resids.extend(resid_part)
-    unique_resids = set(resids)
+    unique_resids = set(natsort(resids))
     return(unique_resids)
 
 def natsort(list_):
@@ -190,4 +190,4 @@ def add_new_resources_to_db(res_ids):
     conn.close()
 
 if __name__ == '__main__':
-    add_new_resources_to_db(natsort(get_resource_ids))
+    add_new_resources_to_db(get_resource_ids())
