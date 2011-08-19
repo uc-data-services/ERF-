@@ -72,7 +72,7 @@ def get_resource_ids():
         typehtml = typeresponse.read()
         resid_part = re.findall('resId=\d+', typehtml)
         resids.extend(resid_part)
-    unique_resids = set(natsort(resids))
+    unique_resids = natsort(set(resids))
     return(unique_resids)
 
 def natsort(list_):
