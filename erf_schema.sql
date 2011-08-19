@@ -3,6 +3,7 @@ DROP TABLE IF EXISTS r_t_bridge;
 DROP TABLE IF EXISTS resource;
 DROP TABLE IF EXISTS subject;
 DROP TABLE IF EXISTS type;
+DROP TABLE IF EXISTS alternate_title;
 
 CREATE TABLE "r_s_bridge" ("rid" INTEGER NOT NULL , "sid" INTEGER NOT NULL , "is_core" BOOL, PRIMARY KEY ("rid", "sid"));
 CREATE TABLE "r_t_bridge" ("rid" INTEGER NOT NULL , "tid" INTEGER NOT NULL , PRIMARY KEY ("rid", "tid"));
