@@ -108,82 +108,86 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     #erf_res_ids_and_dates = erf_resids_and_lastupdates()
     update_and_new = set(erf_res_ids_and_dates)-set(local_resids_and_dates)
     return update_and_new
-    
-create_db_tables() #currently drops existing tables and creates them anew
-#parts of the ERF urls for global use
 
-conn = sqlite3.connect(db_filename)
-c = conn.cursor()
-#res_ids = natsort(get_resource_ids())
-res_ids = ['resId=1299', 'resId=3132', 'resId=3138', 'resId=3242','resId=3328']
-for id in res_ids:
-    try:
-   
-        response = urllib2.urlopen(baseurl+detail+id)
-        html = response.read()
-        erf_dict = parse_page(html)
-        erf_dict['resource_id'] = int(id.lstrip("resId=")) #need to pull out current resId from res_ids & add to dict
-        resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
-        c.execute(resource_stmt, (erf_dict['title'], 
-                                       erf_dict['resource_id'],
-                                       erf_dict['text'],
-                                       erf_dict['brief_description'], 
-                                       erf_dict['publication_dates_covered'],
-                                       erf_dict['licensing_restriction'],
-                                       erf_dict['record_last_modified'],
-                                       erf_dict['url'],)) # adding fields to the resource table in db
-        
-        conn.commit()
-        
-        #capture the lastrowid for use in bridge table b/t resource & subject
-        rid = c.lastrowid
-        erf_subj = erf_dict['subject'] # create a list out of subject terms
-        erf_core = erf_dict['core_subject'] # create a list out of core subject terms
-        erf_type = erf_dict['resource_type'] # create a list out of types
-         
-        subject_stmt = "INSERT INTO subject (term) VALUES (?)"
-        rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
-        is_core = 0
-        for term in erf_subj:
-            c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
-            is_term = c.fetchone()
-            if is_term is not None:
-                sid = is_term[0]
-            else:    
-                c.execute(subject_stmt, (term,))
-                conn.commit()
-                sid = c.lastrowid
-            for erf_core_term in erf_core:
-                if erf_core_term == term:
-                    is_core = 1
-            c.execute(rs_bridge_stmt, (rid,sid, is_core))
+def add_new_resources_to_db(res_ids): 
+    create_db_tables() #currently drops existing tables and creates them anew
+    #parts of the ERF urls for global use
+    
+    conn = sqlite3.connect(db_filename)
+    c = conn.cursor()
+    #res_ids = natsort(get_resource_ids()) - need to add this to main
+    #res_ids = ['resId=1299', 'resId=3132', 'resId=3138', 'resId=3242','resId=3328']
+    for id in res_ids:
+        try:
+       
+            response = urllib2.urlopen(baseurl+detail+id)
+            html = response.read()
+            erf_dict = parse_page(html)
+            erf_dict['resource_id'] = int(id.lstrip("resId=")) #need to pull out current resId from res_ids & add to dict
+            resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
+            c.execute(resource_stmt, (erf_dict['title'], 
+                                           erf_dict['resource_id'],
+                                           erf_dict['text'],
+                                           erf_dict['brief_description'], 
+                                           erf_dict['publication_dates_covered'],
+                                           erf_dict['licensing_restriction'],
+                                           erf_dict['record_last_modified'],
+                                           erf_dict['url'],)) # adding fields to the resource table in db
+            
             conn.commit()
             
-        type_stmt = "INSERT INTO type (type) VALUES (?)"
-        rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
-        for term in erf_type:
-            c.execute("SELECT tid FROM type WHERE type=?", (term,))
-            is_type = c.fetchone()
-            if is_type is not None:
-                tid = is_type[0]
-            else:
-                c.execute(type_stmt, (term,))
+            #capture the lastrowid for use in bridge table b/t resource & subject
+            rid = c.lastrowid
+            erf_subj = erf_dict['subject'] # create a list out of subject terms
+            erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+            erf_type = erf_dict['resource_type'] # create a list out of types
+             
+            subject_stmt = "INSERT INTO subject (term) VALUES (?)"
+            rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
+            is_core = 0
+            for term in erf_subj:
+                c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
+                is_term = c.fetchone()
+                if is_term is not None:
+                    sid = is_term[0]
+                else:    
+                    c.execute(subject_stmt, (term,))
+                    conn.commit()
+                    sid = c.lastrowid
+                for erf_core_term in erf_core:
+                    if erf_core_term == term:
+                        is_core = 1
+                c.execute(rs_bridge_stmt, (rid,sid, is_core))
                 conn.commit()
-                tid = c.lastrowid
-            c.execute(rt_bridge_stmt, (rid, tid))
-            conn.commit()
-        if "alternate_title" in erf_dict: 
-            erf_alt = erf_dict['alternate_title']
-            alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
-            for term in erf_alt:
-                c.execute(alt_title_stmt, (term, rid))
-           
-        print "Title: ", erf_dict['title'], " Resource ID: ", erf_dict['resource_id']
-    except sqlite3.ProgrammingError as err:
-        print ('Error: ' + str(err))
-        print erf_dict['title']
-    except urllib2.URLError as err:
-        if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
-            print str(err)
-            time.sleep(RETRY_DELAY)
-conn.close()
+                
+            type_stmt = "INSERT INTO type (type) VALUES (?)"
+            rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
+            for term in erf_type:
+                c.execute("SELECT tid FROM type WHERE type=?", (term,))
+                is_type = c.fetchone()
+                if is_type is not None:
+                    tid = is_type[0]
+                else:
+                    c.execute(type_stmt, (term,))
+                    conn.commit()
+                    tid = c.lastrowid
+                c.execute(rt_bridge_stmt, (rid, tid))
+                conn.commit()
+            if "alternate_title" in erf_dict: 
+                erf_alt = erf_dict['alternate_title']
+                alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
+                for term in erf_alt:
+                    c.execute(alt_title_stmt, (term, rid))
+               
+            print "Title: ", erf_dict['title'], " Resource ID: ", erf_dict['resource_id']
+        except sqlite3.ProgrammingError as err:
+            print ('Error: ' + str(err))
+            print erf_dict['title']
+        except urllib2.URLError as err:
+            if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
+                print str(err)
+                time.sleep(RETRY_DELAY)
+    conn.close()
+
+if __name__ == '__main__':
+    add_new_resources_to_db(natsort(get_resource_ids))
