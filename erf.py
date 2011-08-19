@@ -106,7 +106,7 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     '''returns a list resids that need updating or adding'''
     #local_resids_and_dates = get_local_resids_and_update_dates()
     #erf_res_ids_and_dates = erf_resids_and_lastupdates()
-    update_and_new = set(local_resids_and_dates)-set(erf_res_ids_and_dates)
+    update_and_new = set(erf_res_ids_and_dates)-set(local_resids_and_dates)
     return update_and_new
     
 create_db_tables() #currently drops existing tables and creates them anew
@@ -114,8 +114,8 @@ create_db_tables() #currently drops existing tables and creates them anew
 
 conn = sqlite3.connect(db_filename)
 c = conn.cursor()
-res_ids = natsort(get_resource_ids())
-#res_ids = ['resId=1299','resId=3328']
+#res_ids = natsort(get_resource_ids())
+res_ids = ['resId=1299', 'resId=3132', 'resId=3138', 'resId=3242','resId=3328']
 for id in res_ids:
     try:
    
