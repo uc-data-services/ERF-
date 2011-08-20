@@ -6,6 +6,9 @@ import sqlite3
 import datetime
 import os
 import time
+import getopt
+import sys
+
 
 """
 1.access by type erf and findall resourcetypes
@@ -189,5 +192,41 @@ def add_new_resources_to_db(res_ids):
                 time.sleep(RETRY_DELAY)
     conn.close()
 
+    
+def main():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "huc", ["help", "update", "create"])
+    except getopt.GetoptError, err:
+        # print help information and exit:
+        print str(err) # will print something like "option -a not recognized"
+        usage()
+        sys.exit(2)
+    for o, a in opts:
+        if o in ("-u", "--update"):
+           #need function that updates db 
+            print "  ***update not implemented yet***"
+            usage()
+        elif o in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif o in ("-c", "--create"):
+            add_new_resources_to_db(get_resource_ids())
+        else:
+            assert False, "unhandled option"
+
+def usage():
+    print """
+    ERF Scrape Usage:
+    
+    1. Create a new local erf sqlite datatbase:
+    
+    >>>python erf.py --create 
+    
+    2. Update the local erf data base:
+    
+    >>>python erf.py --update
+    
+    """
+
 if __name__ == '__main__':
-    add_new_resources_to_db(get_resource_ids())
+    main()
