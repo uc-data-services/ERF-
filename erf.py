@@ -79,6 +79,7 @@ def get_resource_ids():
     return(unique_resids)
 
 def natsort(list_):
+    '''a natural sort copied from pypi'''
     # decorate
     tmp = [ (int(re.search('\d+', i).group(0)), i) for i in list_]
     tmp.sort()
@@ -106,24 +107,28 @@ def erf_resids_and_lastupdates(erf_res_ids):
     return erf_res_ids_last_mod
 
 def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
-    '''returns a list resids that need updating or adding'''
-    #local_resids_and_dates = get_local_resids_and_update_dates()
-    #erf_res_ids_and_dates = erf_resids_and_lastupdates()
+    '''takes two 2-lists & returns a list resids that need updating or adding'''
+    #needs more logic to distinguish b/t new erf entries, updated ones & once that are deleted in erf
+    #for deleted try the diff b/t local sqlite db and erf ids
+    #for new, need to just find the diff b/t erf_resourceIds minus sqlite resource ids
+    #need to construct a 2-tuple that contains the resId & status ('new, update, deleted')
     update_and_new = set(erf_res_ids_and_dates)-set(local_resids_and_dates)
-    return update_and_new
+    #use list comprehension to create 3 lists based on status
+    #call add_new_resources_to_db for 'new' list
+    #call update_resources_to_db for 'update' list
+    #figure out what to do with delete
+    #needs some print statements telling us what happened, which resources were updated, what's new, what's deleted
+    return update_or_new_or_delete #this method might not return anything if it calls update,new, delete methods (see above)
 
 def add_new_resources_to_db(res_ids): 
-    create_db_tables() #currently drops existing tables and creates them anew
-    #parts of the ERF urls for global use
-    
+    '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
+    the resources to a local sqlite db.'''
+    create_db_tables() #currently drops existing tables    
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
-    #res_ids = natsort(get_resource_ids()) - need to add this to main
-    #res_ids = ['resId=1299', 'resId=3132', 'resId=3138', 'resId=3242','resId=3328']
     for id in res_ids:
-        try:
-       
-            response = urllib2.urlopen(baseurl+detail+id)
+        try:       
+            response = urllib2.urlopen(baseurl+detail+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
             html = response.read()
             erf_dict = parse_page(html)
             erf_dict['resource_id'] = int(id.lstrip("resId=")) #need to pull out current resId from res_ids & add to dict
@@ -138,13 +143,10 @@ def add_new_resources_to_db(res_ids):
                                            erf_dict['url'],)) # adding fields to the resource table in db
             
             conn.commit()
-            
-            #capture the lastrowid for use in bridge table b/t resource & subject
-            rid = c.lastrowid
+            rid = c.lastrowid #capture last row id of resource
             erf_subj = erf_dict['subject'] # create a list out of subject terms
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
-            erf_type = erf_dict['resource_type'] # create a list out of types
-             
+            erf_type = erf_dict['resource_type'] # create a list out of types 
             subject_stmt = "INSERT INTO subject (term) VALUES (?)"
             rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
             is_core = 0
@@ -180,8 +182,7 @@ def add_new_resources_to_db(res_ids):
                 erf_alt = erf_dict['alternate_title']
                 alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
                 for term in erf_alt:
-                    c.execute(alt_title_stmt, (term, rid))
-               
+                    c.execute(alt_title_stmt, (term, rid))             
             print "Title: ", erf_dict['title'], " Resource ID: ", erf_dict['resource_id']
         except sqlite3.ProgrammingError as err:
             print ('Error: ' + str(err))
