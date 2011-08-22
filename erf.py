@@ -110,19 +110,25 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     '''Takes two 2-lists & returns a list resids that need updating or adding'''
     #for new, need to just find the diff b/t erf_resourceIds minus sqlite resource ids
     local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
-    erf_resids, erf_dates_last_modified = zip(*erf_resids_and_lastupdates) #unzipping the 2-tuple list so we can find diff
+    erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates) #unzipping the 2-tuple list so we can find diff
     new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids
     unpublish_resids = set(local_resids)-set(erf_resids)#should tell us what's has been removed from ERF & needs unpublishing
     update_resids = []
-    for lids in local_resids_and_dates:
-        for rids in erf_res_ids_and_dates:
-            if lids[1] != rids[1]
-            update_resids.append(rids[0])
+    for lids, ldate in local_resids_and_dates:
+        #print ldate
+        for rids, rdate in erf_res_ids_and_dates:
+            #print rdate
+            if lids == rids:
+                if ldate != rdate:
+                    update_resids.append(rids)
+                    #print rids
+    print "New resouces ", new_resids
+    print "Unpublish resources ", unpublish_resids
+    print "Updated resources ", update_resids
     #call add_new_resources_to_db for 'new' list
     #call update_resources_to_db for 'update' list
     #figure out what to do with delete
     #needs some print statements telling us what happened, which resources were updated, what's new, what's deleted
-    return update_or_new_or_delete #this method might not return anything if it calls update,new, delete methods (see above)
 
 def add_new_resources_to_db(res_ids): 
     '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
@@ -210,6 +216,8 @@ def main():
         if o in ("-u", "--update"):
            #need function that updates db 
             print "  ***update not implemented yet***"
+            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), erf_resids_and_lastupdates(get_resource_ids))
+                                                               
             usage()
         elif o in ("-h", "--help"):
             usage()
