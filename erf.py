@@ -107,13 +107,17 @@ def erf_resids_and_lastupdates(erf_res_ids):
     return erf_res_ids_last_mod
 
 def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
-    '''takes two 2-lists & returns a list resids that need updating or adding'''
-    #needs more logic to distinguish b/t new erf entries, updated ones & once that are deleted in erf
-    #for deleted try the diff b/t local sqlite db and erf ids
+    '''Takes two 2-lists & returns a list resids that need updating or adding'''
     #for new, need to just find the diff b/t erf_resourceIds minus sqlite resource ids
-    #need to construct a 2-tuple that contains the resId & status ('new, update, deleted')
-    update_and_new = set(erf_res_ids_and_dates)-set(local_resids_and_dates)
-    #use list comprehension to create 3 lists based on status
+    local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
+    erf_resids, erf_dates_last_modified = zip(*erf_resids_and_lastupdates) #unzipping the 2-tuple list so we can find diff
+    new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids
+    unpublish_resids = set(local_resids)-set(erf_resids)#should tell us what's has been removed from ERF & needs unpublishing
+    update_resids = []
+    for lids in local_resids_and_dates:
+        for rids in erf_res_ids_and_dates:
+            if lids[1] != rids[1]
+            update_resids.append(rids[0])
     #call add_new_resources_to_db for 'new' list
     #call update_resources_to_db for 'update' list
     #figure out what to do with delete
@@ -183,7 +187,7 @@ def add_new_resources_to_db(res_ids):
                 alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
                 for term in erf_alt:
                     c.execute(alt_title_stmt, (term, rid))             
-            print "Title: ", erf_dict['title'], " Resource ID: ", erf_dict['resource_id']
+            print " Resource ID: ", erf_dict['resource_id'], "Title: ", erf_dict['title']
         except sqlite3.ProgrammingError as err:
             print ('Error: ' + str(err))
             print erf_dict['title']
