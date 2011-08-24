@@ -107,12 +107,17 @@ def erf_resids_and_lastupdates(erf_res_ids):
     return erf_res_ids_last_mod
 
 def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
-    '''Takes two 2-lists & returns a list resids that need updating or adding'''
+    '''Takes two 2-lists, determines what's new, what needs to be updated, what needs to be unpublished. 
+    Then it calls the appropriate function to add, update or unpublish.'''
     #for new, need to just find the diff b/t erf_resourceIds minus sqlite resource ids
     local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
     erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates) #unzipping the 2-tuple list so we can find diff
-    new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids
+    new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids from ERF
+    if new_resids: #see if new_resids list has ids 
+        add_new_resources_to_db(new_resids)
     unpublish_resids = set(local_resids)-set(erf_resids)#should tell us what's has been removed from ERF & needs unpublishing
+    if unpublish_resids: #see if there are any resources needing to be unpublished
+        print unpublish_resids
     update_resids = []
     for lids, ldate in local_resids_and_dates:
         #print ldate
@@ -121,11 +126,12 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
             if lids == rids:
                 if ldate != rdate:
                     update_resids.append(rids)
-                    #print rids
+    if update_resids:  #see if there are resources needing updating
+        update_resources_in_db(update_resids)
     print "New resouces ", new_resids
     print "Unpublish resources ", unpublish_resids
     print "Updated resources ", update_resids
-    #call add_new_resources_to_db for 'new' list
+    
     #call update_resources_to_db for 'update' list
     #figure out what to do with delete
     #needs some print statements telling us what happened, which resources were updated, what's new, what's deleted
@@ -203,7 +209,41 @@ def add_new_resources_to_db(res_ids):
                 time.sleep(RETRY_DELAY)
     conn.close()
 
-    
+def update_resources_in_db(update_list):
+     with sqlite3.connect(db_filename) as conn:
+         cursor = conn.cursor()
+         for id in update_list:
+             query ="""UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, 
+             licensing = :licensing, last_modified = :last_modified,  url = :url
+             WHERE resource_id = :resource_id
+             """
+            response = urllib2.urlopen(baseurl+detail+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
+            html = response.read()
+            erf_dict = parse_page(html)
+            cursor.execute(resource_stmt, {"erf_dict['title']":title, 
+                                           "erf_dict['text']":text,
+                                           "erf_dict['brief_description']":description, 
+                                           "erf_dict['publication_dates_covered']":coverage,
+                                           "erf_dict['licensing_restriction']":licensing,
+                                           "erf_dict['record_last_modified']":last_modified,
+                                           "erf_dict['url']":url,}) # adding fields to the resource table in db
+            
+            conn.commit()
+            rid = cursor.lastrowid #capture last row id of resource
+            erf_subj = erf_dict['subject'] # create a list out of subject terms
+            erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+            erf_type = erf_dict['resource_type'] # create a list out of types 
+            subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
+            cursor.execute(subjects, (rid,))
+            subject_terms = cursor.fetchall()
+            new_subjects = set(update_list)-set(subject_terms)
+            if new_subjects:
+                for subjects in new_subjects:
+                    #logic to add
+            remove_subjects = set(subject_terms)-set(update_list)
+            if remove_subjects:
+                for subjects in remove_subjects:
+                    #logic to remove subjects from resid
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "huc", ["help", "update", "create"])
