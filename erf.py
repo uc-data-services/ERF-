@@ -35,11 +35,17 @@ def parse_page(html):
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
         html = html.replace('Tageb\xc3\x83\xc2\xbccher', 'Tageb&uuml;cher')
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
+    url_regex = r"""<A HREF="(?i)\b(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
+    {};:'".,<>?«»“”‘’])">(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
+    {};:'".,<>?«»“”‘’]))"""
+    compile_obj = re.compile(url_regex,  re.IGNORECASE)  #compiling the url_regex taken from http://daringfireball.net/2010/07/improved_regex_for_matching_urls
+    match_obj = compile_obj.search(html) #searching for just ERF url in html
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
     erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
+    erf_dict['url'] = match_obj.group(5) # pull out only the url without html and overwrite the existing url
     if [i[1] for i in erf_list if i[0] == "alternate_title"]:
         erf_dict['alternate_title'] = [i[1] for i in erf_list if i[0] == "alternate_title"]
     if 'text' not in erf_dict:
