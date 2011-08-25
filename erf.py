@@ -36,8 +36,9 @@ def parse_page(html):
         html = html.replace('Tageb\xc3\x83\xc2\xbccher', 'Tageb&uuml;cher')
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
     url_regex = r"""<A HREF="(?i)\b(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
-    {};:'".,<>?«»“”‘’])">(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
-    {};:'".,<>?«»“”‘’]))"""
+{};:'".,<>?«»“”‘’])">(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
+{};:'".,<>?«»“”‘’]))
+"""
     compile_obj = re.compile(url_regex,  re.IGNORECASE)  #compiling the url_regex taken from http://daringfireball.net/2010/07/improved_regex_for_matching_urls
     match_obj = compile_obj.search(html) #searching for just ERF url in html
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
@@ -220,8 +221,7 @@ def update_resources_in_db(update_list):
          cursor = conn.cursor()
          for id in update_list:
              query ="""UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, 
-             licensing = :licensing, last_modified = :last_modified,  url = :url
-             WHERE resource_id = :resource_id
+             licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
             response = urllib2.urlopen(baseurl+detail+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
             html = response.read()
