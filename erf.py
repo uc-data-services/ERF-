@@ -1,4 +1,5 @@
 #!/usr/bin/evn python
+# -*- coding: utf-8 -*-
 
 import urllib2
 import re
@@ -8,6 +9,7 @@ import os
 import time
 import getopt
 import sys
+import xmlwitch
 
 
 """
@@ -35,10 +37,9 @@ def parse_page(html):
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
         html = html.replace('Tageb\xc3\x83\xc2\xbccher', 'Tageb&uuml;cher')
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
-    url_regex = r"""<A HREF="(?i)\b(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
-{};:'".,<>?«»“”‘’])">(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
+    url_regex = r'''<A HREF="(?i)\b(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])">(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
 {};:'".,<>?«»“”‘’]))
-"""
+'''
     compile_obj = re.compile(url_regex,  re.IGNORECASE)  #compiling the url_regex taken from http://daringfireball.net/2010/07/improved_regex_for_matching_urls
     match_obj = compile_obj.search(html) #searching for just ERF url in html
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
@@ -220,8 +221,7 @@ def update_resources_in_db(update_list):
      with sqlite3.connect(db_filename) as conn:
          cursor = conn.cursor()
          for id in update_list:
-             query ="""UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, 
-             licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
+            query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
             response = urllib2.urlopen(baseurl+detail+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
             html = response.read()
@@ -243,13 +243,65 @@ def update_resources_in_db(update_list):
             cursor.execute(subjects, (rid,))
             subject_terms = cursor.fetchall()
             new_subjects = set(update_list)-set(subject_terms)
+            remove_subjects = set(subject_terms)-set(update_list)            
             if new_subjects:
                 for subjects in new_subjects:
-                    #logic to add
-            remove_subjects = set(subject_terms)-set(update_list)
+                    print subjects        
             if remove_subjects:
                 for subjects in remove_subjects:
-                    #logic to remove subjects from resid
+                    print subjects
+                    
+def write_to_atom():
+    now = datetime.datetime.now()
+    with sqlite3.connect(db_filename) as conn:
+        cursor = conn.cursor()
+        resids = "SELECT rid FROM resource"
+        cursor.execute(resids)
+        rids = cursor.fetchall()
+        rids = [rid[0] for rid in rids]
+    xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
+    with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
+        xml.title('Electronic Resources - UC Berkeley Library')
+        xml.updated(now.strftime("%Y-%m-%d %H:%M"))
+        with xml.author:
+            xml.name('UC Berkeley The Library')
+            xml.id('http://www.lib.berkeley.edu')
+        for rid in rids:
+            #rid = str(rid)
+            resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
+            #subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
+            #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
+            #types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"      
+            cursor.execute(resource_details_stmt, (rid,))
+            resource_details_db = cursor.fetchone()
+            title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
+            #cursor.execute(subjects, (rid,))
+            #subjects_db = cursor.fetchall()
+            #cursor.execute(alternate_title_stmt, (rid,))
+            #alternate_titles = cursor.fetchall()
+            #cursor.execute(types_stmt, (rid,))
+            #types = cursor.fetchall()
+            url_id = baseurl+detail+str(resource_id)
+            with xml.entry:
+                xml.title(title)
+                xml.id(url_id)
+                xml.updated(last_modified)
+                xml.dc__description(description)
+                if coverage != "NULL":
+                    xml.dc__coverage(coverage)
+                if licensing != "NULL":
+                    xml.dc__accessRights(licensing)
+                #for subject in subjects_db:
+                    ##need another test to see if is core & if so, add attribute
+                    #xml.dc__subject(subject)
+                #if alternate_titles:
+                    #for title in alternate_titles:
+                        #xml.dc__alternate(title)
+                #for type in types:
+                    #xml.dc__type(type)
+                xml.url(url)              
+    print(xml)
+    
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "huc", ["help", "update", "create"])
