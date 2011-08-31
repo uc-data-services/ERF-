@@ -269,16 +269,19 @@ def write_to_atom():
         for rid in rids:
             #rid = str(rid)
             resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
-            #subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
+            subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
             #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
             #types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"      
             cursor.execute(resource_details_stmt, (rid,))
             resource_details_db = cursor.fetchone()
             title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
-            #cursor.execute(subjects, (rid,))
-            #subjects_db = cursor.fetchall()
-            #cursor.execute(alternate_title_stmt, (rid,))
-            #alternate_titles = cursor.fetchall()
+            cursor.execute(subjects, (rid,))
+            subjects_db = cursor.fetchall()
+            subjects_db = [subject[0] for subject in subjects_db]
+            cursor.execute("SELECT title from alternate_title WHERE rid=?", (rid,))
+            alt_title = cursor.fetchall()
+            alt_title = [a_title[0] for a_title in alt_title]
+                #print rid, alternate_title
             #cursor.execute(types_stmt, (rid,))
             #types = cursor.fetchall()
             url_id = baseurl+detail+str(resource_id)
@@ -291,12 +294,11 @@ def write_to_atom():
                     xml.dc__coverage(coverage)
                 if licensing != "NULL":
                     xml.dc__accessRights(licensing)
-                #for subject in subjects_db:
+                for subject in subjects_db:
                     ##need another test to see if is core & if so, add attribute
-                    #xml.dc__subject(subject)
-                #if alternate_titles:
-                    #for title in alternate_titles:
-                        #xml.dc__alternate(title)
+                    xml.dc__subject(subject)
+                for a_title in alt_title:
+                    xml.dc__alternate(a_title)
                 #for type in types:
                     #xml.dc__type(type)
                 xml.url(url)              
