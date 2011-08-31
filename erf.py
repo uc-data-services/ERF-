@@ -37,9 +37,7 @@ def parse_page(html):
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
         html = html.replace('Tageb\xc3\x83\xc2\xbccher', 'Tageb&uuml;cher')
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
-    url_regex = r'''<A HREF="(?i)\b(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])">(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]
-{};:'".,<>?«»“”‘’]))
-'''
+    url_regex = r""">(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))</A><BR>"""
     compile_obj = re.compile(url_regex,  re.IGNORECASE)  #compiling the url_regex taken from http://daringfireball.net/2010/07/improved_regex_for_matching_urls
     match_obj = compile_obj.search(html) #searching for just ERF url in html
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
@@ -47,7 +45,7 @@ def parse_page(html):
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
     erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
-    erf_dict['url'] = match_obj.group(5) # pull out only the url without html and overwrite the existing url
+    erf_dict['url'] = match_obj.group(1) # pull out only the url without html and overwrite the existing url
     if [i[1] for i in erf_list if i[0] == "alternate_title"]:
         erf_dict['alternate_title'] = [i[1] for i in erf_list if i[0] == "alternate_title"]
     if 'text' not in erf_dict:
@@ -218,9 +216,9 @@ def add_new_resources_to_db(res_ids):
     conn.close()
 
 def update_resources_in_db(update_list):
-     with sqlite3.connect(db_filename) as conn:
-         cursor = conn.cursor()
-         for id in update_list:
+    with sqlite3.connect(db_filename) as conn:
+        cursor = conn.cursor()
+        for id in update_list:
             query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
             response = urllib2.urlopen(baseurl+detail+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
@@ -259,49 +257,49 @@ def write_to_atom():
         cursor.execute(resids)
         rids = cursor.fetchall()
         rids = [rid[0] for rid in rids]
-    xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
-    with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
-        xml.title('Electronic Resources - UC Berkeley Library')
-        xml.updated(now.strftime("%Y-%m-%d %H:%M"))
-        with xml.author:
-            xml.name('UC Berkeley The Library')
-            xml.id('http://www.lib.berkeley.edu')
-        for rid in rids:
-            #rid = str(rid)
-            resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
-            subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
-            #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
-            #types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"      
-            cursor.execute(resource_details_stmt, (rid,))
-            resource_details_db = cursor.fetchone()
-            title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
-            cursor.execute(subjects, (rid,))
-            subjects_db = cursor.fetchall()
-            subjects_db = [subject[0] for subject in subjects_db]
-            cursor.execute("SELECT title from alternate_title WHERE rid=?", (rid,))
-            alt_title = cursor.fetchall()
-            alt_title = [a_title[0] for a_title in alt_title]
-                #print rid, alternate_title
-            #cursor.execute(types_stmt, (rid,))
-            #types = cursor.fetchall()
-            url_id = baseurl+detail+str(resource_id)
-            with xml.entry:
-                xml.title(title)
-                xml.id(url_id)
-                xml.updated(last_modified)
-                xml.dc__description(description)
-                if coverage != "NULL":
-                    xml.dc__coverage(coverage)
-                if licensing != "NULL":
-                    xml.dc__accessRights(licensing)
-                for subject in subjects_db:
-                    ##need another test to see if is core & if so, add attribute
-                    xml.dc__subject(subject)
-                for a_title in alt_title:
-                    xml.dc__alternate(a_title)
-                #for type in types:
-                    #xml.dc__type(type)
-                xml.url(url)              
+        xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
+        with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
+            xml.title('Eelectronic Resources - UC Berkeley Library')
+            xml.updated(now.strftime("%Y-%m-%d %H:%M"))
+            with xml.author:
+                xml.name('UC Berkeley The Library')
+                xml.id('http://www.lib.berkeley.edu')
+            for rid in rids:
+                #rid = str(rid)
+                resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
+                subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
+                #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
+                types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"      
+                cursor.execute(resource_details_stmt, (rid,))
+                resource_details_db = cursor.fetchone()
+                title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
+                cursor.execute(subjects, (rid,))
+                subjects_db = cursor.fetchall()
+                subjects_db = [subject[0] for subject in subjects_db]
+                cursor.execute("SELECT title from alternate_title WHERE rid=?", (rid,))
+                alt_title = cursor.fetchall()
+                alt_title = [a_title[0] for a_title in alt_title]
+                cursor.execute(types_stmt, (rid,))
+                types = cursor.fetchall()
+                types = [a_type[0] for a_type in types]
+                url_id = baseurl+detail+str(resource_id)
+                with xml.entry:
+                    xml.title(title)
+                    xml.id(url_id)
+                    xml.updated(last_modified)
+                    xml.dc__description(description)
+                    if coverage != "NULL":
+                        xml.dc__coverage(coverage)
+                    if licensing != "NULL":
+                        xml.dc__accessRights(licensing)
+                    for subject in subjects_db:
+                        ##need another test to see if is core & if so, add attribute
+                        xml.dc__subject(subject)
+                    for a_title in alt_title:
+                        xml.dc__alternate(a_title)
+                    for type in types:
+                        xml.dc__type(type)
+                    xml.url(url)              
     print(xml)
     
 def main():
