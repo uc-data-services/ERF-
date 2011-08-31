@@ -36,12 +36,14 @@ def parse_page(html):
         html = html.replace('Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
         html = html.replace('Tageb\xc3\x83\xc2\xbccher', 'Tageb&uuml;cher')
-    erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html))
-    url_regex = r""">(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))</A><BR>"""
-    compile_obj = re.compile(url_regex,  re.IGNORECASE)  #compiling the url_regex taken from http://daringfireball.net/2010/07/improved_regex_for_matching_urls
-    match_obj = compile_obj.search(html) #searching for just ERF url in html
+    erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) 
+    #url_regex = r""">(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))</A><BR>"""
+    #compile_obj = re.compile(url_regex,  re.IGNORECASE)  #compiling the url_regex taken from http://daringfireball.net/2010/07/improved_regex_for_matching_urls
+    #match_obj = compile_obj.search(html) #searching for just ERF url in html
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
+    url_str = erf_dict['url']
+    url_str = '<A HREF="http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR">http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR</A><BR>'.lstrip('<A HREF=').rstring('</A><BR>').replace(" ", "")
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
     erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
@@ -82,12 +84,13 @@ def get_resource_ids():
         resid_part = re.findall('resId=\d+', typehtml)
         resids.extend(resid_part)
     unique_resids = natsort(set(resids))
+    print "Number of unique Ids: ", len(unique_resids)
     return(unique_resids)
 
 def natsort(list_):
     '''a natural sort copied from pypi'''
     # decorate
-    tmp = [ (int(re.search('\d+', i).group(0)), i) for i in list_]
+    tmp = [(int(re.search('\d+', i).group(0)), i) for i in list_]
     tmp.sort()
     # undecorate
     return [ i[1] for i in tmp ]
