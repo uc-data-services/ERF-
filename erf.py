@@ -43,6 +43,7 @@ def parse_page(html):
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
     url_str = erf_dict['url']
+    re.sub('<A HREF=".*?:">(.*?)', %s, url_str)
     url_str = '<A HREF="http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR">http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR</A><BR>'.lstrip('<A HREF=').rstring('</A><BR>').replace(" ", "")
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
