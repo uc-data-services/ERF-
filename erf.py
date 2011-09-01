@@ -37,13 +37,11 @@ def parse_page(html):
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
         html = html.replace('Tageb\xc3\x83\xc2\xbccher', 'Tageb&uuml;cher')
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) 
-    #url_regex = r""">(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))</A><BR>"""
-    #compile_obj = re.compile(url_regex,  re.IGNORECASE)  #compiling the url_regex taken from http://daringfireball.net/2010/07/improved_regex_for_matching_urls
-    #match_obj = compile_obj.search(html) #searching for just ERF url in html
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
     url_str = erf_dict['url']
-    re.sub('<A HREF=".*?:">(.*?)', %s, url_str)
+    regex_url = re.compile(">(.*?)</A><BR>")
+    erf_dict['url'] = re.search(regex_url, url_str).group(1).replace(" ", "")
     url_str = '<A HREF="http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR">http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR</A><BR>'.lstrip('<A HREF=').rstring('</A><BR>').replace(" ", "")
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
