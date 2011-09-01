@@ -41,6 +41,7 @@ def parse_page(html):
     erf_dict = dict(erf_list)
     url_str = erf_dict['url']
     regex_url = re.compile(">(.*?)</A><BR>")
+    print erf_dict['url']
     erf_dict['url'] = re.search(regex_url, url_str).group(1).replace(" ", "")    
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
