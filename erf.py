@@ -41,12 +41,10 @@ def parse_page(html):
     erf_dict = dict(erf_list)
     url_str = erf_dict['url']
     regex_url = re.compile(">(.*?)</A><BR>")
-    erf_dict['url'] = re.search(regex_url, url_str).group(1).replace(" ", "")
-    url_str = '<A HREF="http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR">http://vnweb.hwwilsonweb.com/hww/jumpstart.jhtml?prod= HSR</A><BR>'.lstrip('<A HREF=').rstring('</A><BR>').replace(" ", "")
+    erf_dict['url'] = re.search(regex_url, url_str).group(1).replace(" ", "")    
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
     erf_dict['resource_type'] = [i[1] for i in erf_list if i[0] == "resource_type"]
-    erf_dict['url'] = match_obj.group(1) # pull out only the url without html and overwrite the existing url
     if [i[1] for i in erf_list if i[0] == "alternate_title"]:
         erf_dict['alternate_title'] = [i[1] for i in erf_list if i[0] == "alternate_title"]
     if 'text' not in erf_dict:
@@ -96,12 +94,11 @@ def natsort(list_):
 
 def get_local_resids_and_update_dates():
     '''Gets the resIds & last update dates from the local sqlite database'''
-    conn = sqlite3.connect(db_filename)
-    c = conn.cursor()
-    last_mod_stmt = "SELECT resource_id, last_modified FROM resource" #get the resource_id & last_modified date from local db
-    c.execute(last_mod_stmt)
-    local_resids_and_updates = c.fetchall() #make a 2-tuple from db query for resource_id & last_modified_date from local db
-    conn.close()
+    with sqlite3.connect(db_filename) as conn:
+        c = conn.cursor()
+        last_mod_stmt = "SELECT resource_id, last_modified FROM resource" #get the resource_id & last_modified date from local db
+        c.execute(last_mod_stmt)
+        local_resids_and_updates = c.fetchall() #make a 2-tuple from db query for resource_id & last_modified_date from local db
     return local_resids_and_updates
 
 def erf_resids_and_lastupdates(erf_res_ids):
