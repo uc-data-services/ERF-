@@ -22,17 +22,15 @@ for this. will need to keep up what resId are already saved to db and use logic 
 duplicates
 """
 baseurl = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
-all_res_types = 'cmd=allResTypes'
-search_res_types = 'cmd=searchResType&'
-detail = 'cmd=detail&'
-resid_slug = 'resId='
-#resid = 'resId=3446 ' #need to remove when put in resid loop
-#os.chdir('/home/tim/Dropbox/ERF-/')
 db_filename = 'erf.sqlite'
 RETRY_DELAY = 2
 
-def parse_page(html):
+def parse_page(rid):
     '''Takes in erf html page & parses html and returns a dict representing an erf entry'''
+    detail = 'cmd=detail&'
+    resid_slug = 'resId='
+    response = urllib2.urlopen(baseurl+detail+resid_slug+rid) # poss. move opening, reading and returning html of erf resource detail to own funciton
+    html = response.read()
     if html.find('Centre\xc3\xa2\xc2\x80\xc2\x99s'):
         html = html.replace('Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
@@ -70,6 +68,8 @@ def create_db_tables():
 
 def get_resource_ids():
     """Returns a unique set of ERF resource ids open erf by type page & pull out all resTypeId=\d+ as array"""
+    all_res_types = 'cmd=allResTypes'
+    search_res_types = 'cmd=searchResType&'
     response = urllib2.urlopen(baseurl+all_res_types)
     html = response.read()
     restypeid = re.findall('resTypeId=\d+', html) 
@@ -152,9 +152,7 @@ def add_new_resources_to_db(res_ids):
     c = conn.cursor()
     for id in res_ids:
         try:       
-            response = urllib2.urlopen(baseurl+detail+resid_slug+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
-            html = response.read()
-            erf_dict = parse_page(html)
+            erf_dict = parse_page(id)
             erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
             resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
             c.execute(resource_stmt, (erf_dict['title'], 
@@ -218,6 +216,7 @@ def add_new_resources_to_db(res_ids):
     conn.close()
 
 def update_resources_in_db(update_list):
+    '''Takes a list of resource ids, graps the page, '''
     with sqlite3.connect(db_filename) as conn:
         cursor = conn.cursor()
         for id in update_list:
