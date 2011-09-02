@@ -25,6 +25,7 @@ baseurl = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 all_res_types = 'cmd=allResTypes'
 search_res_types = 'cmd=searchResType&'
 detail = 'cmd=detail&'
+resid_slug = 'resId='
 #resid = 'resId=3446 ' #need to remove when put in resid loop
 #os.chdir('/home/tim/Dropbox/ERF-/')
 db_filename = 'erf.sqlite'
@@ -41,7 +42,6 @@ def parse_page(html):
     erf_dict = dict(erf_list)
     url_str = erf_dict['url']
     regex_url = re.compile(">(.*?)</A>")
-    print erf_dict['url']
     erf_dict['url'] = re.search(regex_url, url_str).group(1).replace(" ", "")    
     erf_dict['subject'] = [i[1] for i in erf_list if i[0] == "subject"]
     erf_dict['core_subject'] = [i[1] for i in erf_list if i[0] == "core_subject"]
@@ -79,7 +79,7 @@ def get_resource_ids():
         typeurl = baseurl + search_res_types + str(id)
         typeresponse = urllib2.urlopen(typeurl)
         typehtml = typeresponse.read()
-        resid_part = re.findall('resId=\d+', typehtml)
+        resid_part = re.findall('resId=(\d+)', typehtml)
         resids.extend(resid_part)
     unique_resids = natsort(set(resids))
     print "Number of unique Ids: ", len(unique_resids)
@@ -106,16 +106,18 @@ def erf_resids_and_lastupdates(erf_res_ids):
     '''Returns a list of ERF resIds and last update dates.'''
     erf_res_ids_last_mod = []
     for ids in erf_res_ids:
+        print ids
         response = urllib2.urlopen(baseurl+detail+ids)
         html = response.read()
         last_update = re.search('<B>Record last modified:</B>\s(.*?)<BR>', html).group(1)
-        erf_res_ids_last_mod.append((id, last_update)) #need to add as tuple
+        erf_res_ids_last_mod.append((ids, last_update)) #need to add as tuple
     return erf_res_ids_last_mod
 
 def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
     '''Takes two 2-lists, determines what's new, what needs to be updated, what needs to be unpublished. 
     Then it calls the appropriate function to add, update or unpublish.'''
     #for new, need to just find the diff b/t erf_resourceIds minus sqlite resource ids
+    #print "locals: ", len(local_resids_and_dates), "erfs: ", len(erf_res_ids_and_dates)
     local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
     erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates) #unzipping the 2-tuple list so we can find diff
     new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids from ERF
@@ -150,10 +152,10 @@ def add_new_resources_to_db(res_ids):
     c = conn.cursor()
     for id in res_ids:
         try:       
-            response = urllib2.urlopen(baseurl+detail+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
+            response = urllib2.urlopen(baseurl+detail+resid_slug+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
             html = response.read()
             erf_dict = parse_page(html)
-            erf_dict['resource_id'] = int(id.lstrip("resId=")) #need to pull out current resId from res_ids & add to dict
+            erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
             resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
             c.execute(resource_stmt, (erf_dict['title'], 
                                            erf_dict['resource_id'],
@@ -314,7 +316,7 @@ def main():
         if o in ("-u", "--update"):
            #need function that updates db 
             print "  ***update not implemented yet***"
-            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), erf_resids_and_lastupdates(get_resource_ids))
+            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), erf_resids_and_lastupdates(get_resource_ids()))
                                                                
             usage()
         elif o in ("-h", "--help"):
