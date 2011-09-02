@@ -217,7 +217,7 @@ def add_new_resources_to_db(res_ids):
                 print str(err)
                 time.sleep(RETRY_DELAY)
     changes = conn.total_changes()
-    print "No added to DB:  ", changes, "  ERF Resids; "  len(res_ids)
+    print "No added to DB:  ", changes, "  ERF Resids; ",  len(res_ids)
     conn.close()
 
 def update_resources_in_db(update_list):
