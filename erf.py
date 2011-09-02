@@ -35,6 +35,10 @@ def parse_page(rid):
         html = html.replace('Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
         html = html.replace('Tageb\xc3\x83\xc2\xbccher', 'Tageb&uuml;cher')
+    if html.find('RÃÂÃÂÃÂÃÂ©pertoire International de LittÃÂÃÂÃÂÃÂ©rature Musicale'):
+        html = html.replace('RÃÂÃÂÃÂÃÂ©pertoire International de LittÃÂÃÂÃÂÃÂ©rature Musicale', 'Répertoire International de Littérature Musicale')
+    if html.find('Eric WeissteinÂs World of Mathematics'):
+        html = html.replace('Eric WeissteinÂs World of Mathematics', "Eric Weisstein's World of Mathematics")
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) 
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
