@@ -150,6 +150,7 @@ def add_new_resources_to_db(res_ids):
     create_db_tables() #currently drops existing tables    
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
+    
     for id in res_ids:
         try:       
             erf_dict = parse_page(id)
@@ -204,8 +205,10 @@ def add_new_resources_to_db(res_ids):
                 erf_alt = erf_dict['alternate_title']
                 alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
                 for term in erf_alt:
-                    c.execute(alt_title_stmt, (term, rid))             
-            print " Resource ID: ", erf_dict['resource_id'], "Title: ", erf_dict['title']
+                    c.execute(alt_title_stmt, (term, rid))  
+            
+            print " Resource ID: ,", erf_dict['resource_id'], ",  Title: ,", erf_dict['title']
+           
         except sqlite3.ProgrammingError as err:
             print ('Error: ' + str(err))
             print erf_dict['title']
@@ -213,6 +216,8 @@ def add_new_resources_to_db(res_ids):
             if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
                 print str(err)
                 time.sleep(RETRY_DELAY)
+    changes = conn.total_changes()
+    print "No added to DB:  ", changes, "  ERF Resids; "  len(res_ids)
     conn.close()
 
 def update_resources_in_db(update_list):
