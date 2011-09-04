@@ -30,7 +30,7 @@ def parse_page(rid):
     detail = 'cmd=detail&'
     resid_slug = 'resId='
     response = urllib2.urlopen(baseurl+detail+resid_slug+rid) # poss. move opening, reading and returning html of erf resource detail to own funciton
-    html = response.read()
+    html = unicode(response.read())
     if html.find('Centre\xc3\xa2\xc2\x80\xc2\x99s'):
         html = html.replace('Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
     if html.find('Tageb\xc3\x83\xc2\xbccher'):
