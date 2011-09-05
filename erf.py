@@ -210,7 +210,7 @@ def add_new_resources_to_db(res_ids):
                 for term in erf_alt:
                     c.execute(alt_title_stmt, (term, rid))  
             
-            print " Resource ID: ,", erf_dict['resource_id'], ",  Title: ,", erf_dict['title']
+            print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
            
         except sqlite3.ProgrammingError as err:
             print ('Error: ' + str(err))
