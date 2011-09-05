@@ -219,7 +219,7 @@ def add_new_resources_to_db(res_ids):
             if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
                 print str(err)
                 time.sleep(RETRY_DELAY)
-    print "No added to DB:  ", con.execute("select id from resource").rowcount, "  ERF Resids; ",  len(res_ids)
+    print "No added to DB:  ", c.execute("select id from resource").rowcount, "  ERF Resids; ",  len(res_ids)
     conn.close()
 
 def update_resources_in_db(update_list):
