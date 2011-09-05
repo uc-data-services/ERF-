@@ -60,7 +60,6 @@ def parse_page(rid):
         erf_dict['brief_description'] = 'NULL'    
     return erf_dict
 
-e
 def create_db_tables():
     '''Creates tables for in erf.sqlite, if tables already exist, will drop them.'''
     schema = 'erf_schema.sql'
