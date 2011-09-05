@@ -30,16 +30,15 @@ def parse_page(rid):
     detail = 'cmd=detail&'
     resid_slug = 'resId='
     response = urllib2.urlopen(baseurl+detail+resid_slug+rid) # poss. move opening, reading and returning html of erf resource detail to own funciton
-    html = response.read()
+    html = response.read().decode('latin1')
     if html.find('Centre\xc3\xa2\xc2\x80\xc2\x99s'):
         html = html.replace('Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
-    tage = u'Tageb\xfccher'
-    if html.find("Tageb\xc3\x83\xc2\xbccher"):
-        html = html.replace('Tageb\xc3\x83\xc2\xbccher', tage)
+    if html_decode.find('Tageb\xc3\x83\xc2\xbccher'):
+        html = html.replace(u'Tageb\xc3\x83\xc2\xbccher', u'Tageb\xfccher')
     if html.find('R\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9pertoire International de Litt\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9rature Musicale'):
-        html = html.replace('R\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9pertoire International de Litt\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9rature Musicale', 'R\xe9pertoire International de Litt\xe9rature Musicale')
+        html = html.replace(u'R\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9pertoire International de Litt\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9rature Musicale', u'R\xe9pertoire International de Litt\xe9rature Musicale')
     if html.find('Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics'):
-        html = html.replace('Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics', "Eric Weisstein's World of Mathematics")
+        html = html.replace(u'Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics', "Eric Weisstein's World of Mathematics")
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) 
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
@@ -61,7 +60,7 @@ def parse_page(rid):
         erf_dict['brief_description'] = 'NULL'    
     return erf_dict
 
-
+e
 def create_db_tables():
     '''Creates tables for in erf.sqlite, if tables already exist, will drop them.'''
     schema = 'erf_schema.sql'
