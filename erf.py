@@ -220,7 +220,7 @@ def add_new_resources_to_db(res_ids):
                 print str(err)
                 time.sleep(RETRY_DELAY)
     c.execute("select rid from resource")
-    print "No added to DB:  ", c.fetchall().rowcount, "  ERF Resids; ",  len(res_ids)
+    print "No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids)
     conn.close()
 
 def update_resources_in_db(update_list):
