@@ -267,57 +267,58 @@ def write_to_atom():
     atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     erf_atom_filename = 'erf-atom.xml'
     now = datetime.datetime.now()
-    with sqlite3.connect(db_filename) as conn, open(atom_xml_write_directory+erf_atom_filename, mode='w') as atom:
-        cursor = conn.cursor()
-        resids = "SELECT rid FROM resource"
-        cursor.execute(resids)
-        rids = cursor.fetchall()
-        rids = [rid[0] for rid in rids]
-        xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
-        with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
-            xml.title('Eelectronic Resources - UC Berkeley Library')
-            xml.updated(now.strftime("%Y-%m-%d %H:%M"))
-            with xml.author:
-                xml.name('UC Berkeley The Library')
-                xml.id('http://www.lib.berkeley.edu')
-            for rid in rids:
-                #rid = str(rid)
-                resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
-                subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
-                #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
-                types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"      
-                cursor.execute(resource_details_stmt, (rid,))
-                resource_details_db = cursor.fetchone()
-                title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
-                cursor.execute(subjects, (rid,))
-                subjects_db = cursor.fetchall()
-                subjects_db = [subject[0] for subject in subjects_db]
-                cursor.execute("SELECT title from alternate_title WHERE rid=?", (rid,))
-                alt_title = cursor.fetchall()
-                alt_title = [a_title[0] for a_title in alt_title]
-                cursor.execute(types_stmt, (rid,))
-                types = cursor.fetchall()
-                types = [a_type[0] for a_type in types]
-                url_id = baseurl+detail+str(resource_id)
-                with xml.entry:
-                    xml.title(title)
-                    xml.id(url_id)
-                    xml.updated(last_modified)
-                    xml.dc__description(description)
-                    if coverage != "NULL":
-                        xml.dc__coverage(coverage)
-                    if licensing != "NULL":
-                        xml.dc__accessRights(licensing)
-                    for subject in subjects_db:
-                        ##need another test to see if is core & if so, add attribute
-                        xml.dc__subject(subject)
-                    for a_title in alt_title:
-                        xml.dc__alternate(a_title)
-                    for type in types:
-                        xml.dc__type(type)
-                    xml.url(url)              
-    print(xml)
-    atom.write(xml)
+    with sqlite3.connect(db_filename) as conn:
+        with open(atom_xml_write_directory+erf_atom_filename, mode='w') as atom:      
+            cursor = conn.cursor()
+            resids = "SELECT rid FROM resource"
+            cursor.execute(resids)
+            rids = cursor.fetchall()
+            rids = [rid[0] for rid in rids]
+            xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
+            with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
+                xml.title('Eelectronic Resources - UC Berkeley Library')
+                xml.updated(now.strftime("%Y-%m-%d %H:%M"))
+                with xml.author:
+                    xml.name('UC Berkeley The Library')
+                    xml.id('http://www.lib.berkeley.edu')
+                for rid in rids:
+                    #rid = str(rid)
+                    resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
+                    subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
+                    #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
+                    types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"      
+                    cursor.execute(resource_details_stmt, (rid,))
+                    resource_details_db = cursor.fetchone()
+                    title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
+                    cursor.execute(subjects, (rid,))
+                    subjects_db = cursor.fetchall()
+                    subjects_db = [subject[0] for subject in subjects_db]
+                    cursor.execute("SELECT title from alternate_title WHERE rid=?", (rid,))
+                    alt_title = cursor.fetchall()
+                    alt_title = [a_title[0] for a_title in alt_title]
+                    cursor.execute(types_stmt, (rid,))
+                    types = cursor.fetchall()
+                    types = [a_type[0] for a_type in types]
+                    url_id = baseurl+detail+str(resource_id)
+                    with xml.entry:
+                        xml.title(title)
+                        xml.id(url_id)
+                        xml.updated(last_modified)
+                        xml.dc__description(description)
+                        if coverage != "NULL":
+                            xml.dc__coverage(coverage)
+                        if licensing != "NULL":
+                            xml.dc__accessRights(licensing)
+                        for subject in subjects_db:
+                            ##need another test to see if is core & if so, add attribute
+                            xml.dc__subject(subject)
+                        for a_title in alt_title:
+                            xml.dc__alternate(a_title)
+                        for type in types:
+                            xml.dc__type(type)
+                        xml.url(url)              
+            print(xml)
+            atom.write(xml)
     
 def main():
     try:
