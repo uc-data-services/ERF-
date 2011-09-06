@@ -173,23 +173,7 @@ def add_new_resources_to_db(res_ids):
             erf_subj = erf_dict['subject'] # create a list out of subject terms
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
             erf_type = erf_dict['resource_type'] # create a list out of types 
-            subject_stmt = "INSERT INTO subject (term) VALUES (?)"
-            rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
-            is_core = 0
-            for term in erf_subj:
-                c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
-                is_term = c.fetchone()
-                if is_term is not None:
-                    sid = is_term[0]
-                else:    
-                    c.execute(subject_stmt, (term,))
-                    conn.commit()
-                    sid = c.lastrowid
-                for erf_core_term in erf_core:
-                    if erf_core_term == term:
-                        is_core = 1
-                c.execute(rs_bridge_stmt, (rid,sid, is_core))
-                conn.commit()
+ 
                 
             type_stmt = "INSERT INTO type (type) VALUES (?)"
             rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
@@ -223,6 +207,26 @@ def add_new_resources_to_db(res_ids):
     print "No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids)
     conn.close()
 
+def add_subject_and_core_to_db(subj_list, core_list, rid):
+    subject_stmt = "INSERT INTO subject (term) VALUES (?)"
+    rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
+    is_core = 0
+    with sqlite3.connect(db_filename) as conn:
+        c = conn.cursor()
+        for term in subj_list:
+            c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
+            is_term = c.fetchone()
+            if is_term is not None:
+                sid = is_term[0]
+            else:    
+                c.execute(subject_stmt, (term,))
+                conn.commit()
+                sid = c.lastrowid
+            for core_term in core_list:
+                if core_term == term:
+                    is_core = 1
+            c.execute(rs_bridge_stmt, (rid,sid, is_core))
+            conn.commit()
 def update_resources_in_db(update_list):
     '''Takes a list of resource ids, graps the page, '''
     with sqlite3.connect(db_filename) as conn:
@@ -230,9 +234,7 @@ def update_resources_in_db(update_list):
         for id in update_list:
             query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
-            response = urllib2.urlopen(baseurl+detail+id) # poss. move opening, reading and returning html of erf resource detail to own funciton
-            html = response.read()
-            erf_dict = parse_page(html)
+            erf_dict = parse_page(id)
             cursor.execute(resource_stmt, {"erf_dict['title']":title, 
                                            "erf_dict['text']":text,
                                            "erf_dict['brief_description']":description, 
@@ -243,6 +245,7 @@ def update_resources_in_db(update_list):
             
             conn.commit()
             rid = cursor.lastrowid #capture last row id of resource
+            #all below code could be moved to function that handles
             erf_subj = erf_dict['subject'] # create a list out of subject terms
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
             erf_type = erf_dict['resource_type'] # create a list out of types 
@@ -259,8 +262,11 @@ def update_resources_in_db(update_list):
                     print subjects
                     
 def write_to_atom():
+    '''Writes out ERF data in local SQLite db into ATOM schema extended with Dublin Core.'''
+    atom_xml_write_directory = '/home/tim/' #'/var/www/html/' 
+    erf_atom_filename = 'erf-atom.xml'
     now = datetime.datetime.now()
-    with sqlite3.connect(db_filename) as conn:
+    with sqlite3.connect(db_filename) as conn, open(atom_xml_write_directory+erf_atom_filename, mode='w') as atom:
         cursor = conn.cursor()
         resids = "SELECT rid FROM resource"
         cursor.execute(resids)
@@ -310,10 +316,11 @@ def write_to_atom():
                         xml.dc__type(type)
                     xml.url(url)              
     print(xml)
+    atom.write(xml)
     
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "huc", ["help", "update", "create"])
+        opts, args = getopt.getopt(sys.argv[1:], "huca", ["help", "update", "create", "atom"])
     except getopt.GetoptError, err:
         # print help information and exit:
         print str(err) # will print something like "option -a not recognized"
@@ -331,8 +338,11 @@ def main():
             sys.exit()
         elif o in ("-c", "--create"):
             add_new_resources_to_db(get_resource_ids())
+        elif o in ("-a", "--atom"):
+            write_to_atom()
         else:
             assert False, "unhandled option"
+            usage()
 
 def usage():
     print """
