@@ -318,7 +318,7 @@ def write_to_atom():
                             xml.dc__type(type)
                         xml.url(url)              
             print(xml)
-            atom.write(xml)
+            atom.write(str(xml))
     
 def main():
     try:
