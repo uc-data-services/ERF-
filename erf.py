@@ -263,6 +263,7 @@ def update_resources_in_db(update_list):
                     
 def write_to_atom():
     '''Writes out ERF data in local SQLite db into ATOM schema extended with Dublin Core.'''
+    detail = 'cmd=detail&'
     atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     erf_atom_filename = 'erf-atom.xml'
     now = datetime.datetime.now()
