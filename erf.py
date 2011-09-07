@@ -94,7 +94,7 @@ def natsort(list_):
     tmp = [(int(re.search('\d+', i).group(0)), i) for i in list_]
     tmp.sort()
     # undecorate
-    return [ i[1] for i in tmp ]
+    return [i[1] for i in tmp]
 
 def get_local_resids_and_update_dates():
     '''Gets the resIds & last update dates from the local sqlite database'''
@@ -245,13 +245,12 @@ def update_resources_in_db(update_list):
             rid = cursor.lastrowid #capture last row id of resource
             #all below code could be moved to function that handles
             erf_subj = erf_dict['subject'] # create a list out of subject terms
-            erf_core = erf_dict['core_subject'] # create a list out of core subject terms
-            erf_type = erf_dict['resource_type'] # create a list out of types 
             subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
             cursor.execute(subjects, (rid,))
             subject_terms = cursor.fetchall()
             new_subjects = set(erf_subj)-set(subject_terms)
             remove_subjects = set(subject_terms)-set(erf_subj)
+            erf_core = erf_dict['core_subject'] # create a list out of core subject terms
             core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
             cursor.execute(core_terms_stmt, (rid,))
             core_terms = cursor.fetchall()
@@ -260,8 +259,10 @@ def update_resources_in_db(update_list):
             if new_subjects:
                 add_subject_and_core_to_db(new_subjects, new_core, rid) 
             if remove_subjects:
-                for subjects in remove_subjects:
-                    print subjects
+                print subjects #need to pass remove subjects list to a remove_subject(): function
+            erf_type = erf_dict['resource_type'] # create a list out of types 
+            # need sql queries for types and then a add type and remove type function
+
                     
 def write_to_atom():
     '''Writes out ERF data in local SQLite db into ATOM schema extended with Dublin Core.'''
@@ -336,8 +337,7 @@ def main():
         if o in ("-u", "--update"):
            #need function that updates db 
             print "  ***update not implemented yet***"
-            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), erf_resids_and_lastupdates(get_resource_ids()))
-                                                               
+            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), erf_resids_and_lastupdates(get_resource_ids()))                                                   
             usage()
         elif o in ("-h", "--help"):
             usage()
