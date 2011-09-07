@@ -117,10 +117,9 @@ def erf_resids_and_lastupdates(erf_res_ids):
     return erf_res_ids_last_mod
 
 def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
-    '''Takes two 2-lists, determines what's new, what needs to be updated, what needs to be unpublished. 
-    Then it calls the appropriate function to add, update or unpublish.'''
-    #for new, need to just find the diff b/t erf_resourceIds minus sqlite resource ids
-    #print "locals: ", len(local_resids_and_dates), "erfs: ", len(erf_res_ids_and_dates)
+    '''Takes two 2-lists of resids & update dates -- one local from sqlite db and the other from the ERF website-- 
+    and determines what's new, what needs to be updated, what needs to be unpublished or removed. Then it calls the 
+    appropriate functions to add, update or unpublish.'''
     local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
     erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates) #unzipping the 2-tuple list so we can find diff
     new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids from ERF
@@ -128,24 +127,19 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
         add_new_resources_to_db(new_resids)
     unpublish_resids = set(local_resids)-set(erf_resids)#should tell us what's has been removed from ERF & needs unpublishing
     if unpublish_resids: #see if there are any resources needing to be unpublished
-        print unpublish_resids
+        #need to add function that will flag resource as unpublished in db and either not add to ATOM feed or add a flag to it.
+        print unpublish_resids 
     update_resids = []
     for lids, ldate in local_resids_and_dates:
-        #print ldate
         for rids, rdate in erf_res_ids_and_dates:
-            #print rdate
             if lids == rids:
-                if ldate != rdate:
+                if ldate != rdate: #if the dates of local and erf are different
                     update_resids.append(rids)
     if update_resids:  #see if there are resources needing updating
         update_resources_in_db(update_resids)
     print "New resouces ", new_resids
     print "Unpublish resources ", unpublish_resids
     print "Updated resources ", update_resids
-    
-    #call update_resources_to_db for 'update' list
-    #figure out what to do with delete
-    #needs some print statements telling us what happened, which resources were updated, what's new, what's deleted
 
 def add_new_resources_to_db(res_ids): 
     '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
@@ -208,6 +202,7 @@ def add_new_resources_to_db(res_ids):
     conn.close()
 
 def add_subject_and_core_to_db(subj_list, core_list, rid):
+    '''Takes a subject list, a core subject list and a resource id and adds those to the local db.'''
     subject_stmt = "INSERT INTO subject (term) VALUES (?)"
     rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
     is_core = 0
@@ -222,13 +217,16 @@ def add_subject_and_core_to_db(subj_list, core_list, rid):
                 c.execute(subject_stmt, (term,))
                 conn.commit()
                 sid = c.lastrowid
-            for core_term in core_list:
-                if core_term == term:
-                    is_core = 1
+            if core_list: #see if anything is in core_list
+                for core_term in core_list:
+                    if core_term == term:
+                        is_core = 1
             c.execute(rs_bridge_stmt, (rid,sid, is_core))
             conn.commit()
+
 def update_resources_in_db(update_list):
-    '''Takes a list of resource ids, graps the page, '''
+    '''Takes a list of resource ids, gets the erf_dict of each rid from page_parse(), then updates the local database directly
+    and calls functions to also add new subject terms &/or remove terms.'''
     with sqlite3.connect(db_filename) as conn:
         cursor = conn.cursor()
         for id in update_list:
@@ -252,11 +250,15 @@ def update_resources_in_db(update_list):
             subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
             cursor.execute(subjects, (rid,))
             subject_terms = cursor.fetchall()
-            new_subjects = set(update_list)-set(subject_terms)
-            remove_subjects = set(subject_terms)-set(update_list)            
+            new_subjects = set(erf_subj)-set(subject_terms)
+            remove_subjects = set(subject_terms)-set(erf_subj)
+            core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
+            cursor.execute(core_terms_stmt, (rid,))
+            core_terms = cursor.fetchall()
+            new_core = set(erf_core)-set(core_terms)
+            remove_core = set(core_terms) - set(erf_core)
             if new_subjects:
-                for subjects in new_subjects:
-                    print subjects        
+                add_subject_and_core_to_db(new_subjects, new_core, rid) 
             if remove_subjects:
                 for subjects in remove_subjects:
                     print subjects
@@ -358,6 +360,10 @@ def usage():
     2. Update the local erf data base:
     
     >>>python erf.py --update
+    
+    3. Write an ATOM representation of each resource to file: currently set to write to /var/www/html/erf-atom on doemo.lib
+    
+    >>>python erf.py --atom
     
     """
 
