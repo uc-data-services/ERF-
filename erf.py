@@ -278,6 +278,8 @@ def write_to_atom():
             with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
                 xml.title('Eelectronic Resources - UC Berkeley Library')
                 xml.updated(now.strftime("%Y-%m-%d %H:%M"))
+                xml.link(href="http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml", rel="self", type="application/atom+xml")
+                xml.link(rel="hub", href="https://pubsubhubbub.appspot.com")
                 with xml.author:
                     xml.name('UC Berkeley The Library')
                     xml.id('http://www.lib.berkeley.edu')
@@ -344,7 +346,6 @@ def main():
             write_to_atom()
         else:
             assert False, "unhandled option"
-            usage()
 
 def usage():
     print """
