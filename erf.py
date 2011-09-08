@@ -107,13 +107,13 @@ def get_local_resids_and_update_dates():
 
 def erf_resids_and_lastupdates(erf_res_ids):
     '''Returns a list of ERF resIds and last update dates.'''
+    detail = 'cmd=detail&'
     erf_res_ids_last_mod = []
-    for ids in erf_res_ids:
-        print ids
-        response = urllib2.urlopen(baseurl+detail+ids)
-        html = response.read()
-        last_update = re.search('<B>Record last modified:</B>\s(.*?)<BR>', html).group(1)
-        erf_res_ids_last_mod.append((ids, last_update)) #need to add as tuple
+    for rid in erf_res_ids:
+        print rid
+        erf_dict = parse_page(rid)
+        last_update = erf_dict['record_last_modified']
+        erf_res_ids_last_mod.append((rid, last_update)) #need to add as tuple
     return erf_res_ids_last_mod
 
 def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
@@ -137,9 +137,9 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
                     update_resids.append(rids)
     if update_resids:  #see if there are resources needing updating
         update_resources_in_db(update_resids)
-    print "New resouces ", new_resids
-    print "Unpublish resources ", unpublish_resids
-    print "Updated resources ", update_resids
+    print "Number of new resouces: ", len(new_resids)
+    print "Number of resources needing unpublishing: ", len(unpublish_resids)
+    print "Number of resources needing updating: ", len(update_resids)
 
 def add_new_resources_to_db(res_ids): 
     '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
