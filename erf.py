@@ -263,18 +263,16 @@ def update_resources_in_db(update_list):
             subject_terms = cursor.fetchall()
             new_subjects = set(erf_subj)-set(subject_terms)#diff b/t erf_subjects and subject terms in DB to determine new subjects
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+            core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
+            cursor.execute(core_terms_stmt, (rid,))
+            core_terms = cursor.fetchall()
             new_core = set(erf_core)-set(core_terms)
             if new_subjects:
                 add_subject_and_core_to_db(new_subjects, new_core, rid) 
             remove_subjects = set(subject_terms)-set(erf_subj)#dif b/t subj terms in db & erf to see what to remove from db
+            remove_core = set(core_terms) - set(erf_core)
             if remove_subjects:
                 print remove_subjects #need to pass remove subjects list to a remove_subject(): function
-            core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
-            cursor.execute(core_terms_stmt, (rid,))
-            core_terms = cursor.fetchall()
-            remove_core = set(core_terms) - set(erf_core)
-        
-
             erf_type = erf_dict['resource_type'] # create a list out of types 
             if erf_type:
                 
