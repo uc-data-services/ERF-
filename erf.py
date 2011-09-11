@@ -62,9 +62,10 @@ def parse_page(rid):
 
 def create_db_tables():
     '''Creates tables for in erf.sqlite, if tables already exist, will drop them.'''
+    print "Creating database and tables..."
     schema = 'erf_schema.sql'
     with sqlite3.connect(db_filename) as conn:
-        print 'Creating schema'
+        #print 'Creating schema'
         with open(schema, 'rt') as f:
             schema = f.read()
         conn.executescript(schema)
@@ -105,7 +106,7 @@ def get_local_resids_and_update_dates():
         local_resids_and_updates = c.fetchall() #make a 2-tuple from db query for resource_id & last_modified_date from local db
     return local_resids_and_updates
 
-def erf_resids_and_lastupdates(erf_res_ids):
+def get_erf_resids_and_lastupdates(erf_res_ids):
     '''Returns a list of ERF resIds and last update dates.'''
     detail = 'cmd=detail&'
     erf_res_ids_last_mod = []
@@ -147,7 +148,7 @@ def add_new_resources_to_db(res_ids):
     create_db_tables() #currently drops existing tables    
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
-    
+    print "Adding new resources to the database."
     for id in res_ids:
         try:       
             erf_dict = parse_page(id)
@@ -227,6 +228,7 @@ def add_subject_and_core_to_db(subj_list, core_list, rid):
 def update_resources_in_db(update_list):
     '''Takes a list of resource ids, gets the erf_dict of each rid from page_parse(), then updates the local database directly
     and calls functions to also add new subject terms &/or remove terms.'''
+    print "Updating resources..."
     with sqlite3.connect(db_filename) as conn:
         cursor = conn.cursor()
         for id in update_list:
@@ -262,6 +264,7 @@ def update_resources_in_db(update_list):
                 print subjects #need to pass remove subjects list to a remove_subject(): function
             erf_type = erf_dict['resource_type'] # create a list out of types 
             # need sql queries for types and then a add type and remove type function
+            print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
 
                     
 def write_to_atom():
@@ -335,9 +338,8 @@ def main():
         sys.exit(2)
     for o, a in opts:
         if o in ("-u", "--update"):
-           #need function that updates db 
-            print "  ***update not implemented yet***"
-            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), erf_resids_and_lastupdates(get_resource_ids()))                                                   
+            #need function that updates db 
+            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), get_erf_resids_and_lastupdates(get_resource_ids()))                                                   
             usage()
         elif o in ("-h", "--help"):
             usage()
