@@ -144,7 +144,7 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
 
 def add_new_resources_to_db(res_ids): 
     '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
-    the resources to a local sqlite db.'''
+    the resources to a local sqlite db. Calls other functions to add subjects & types.'''
     create_db_tables() #currently drops existing tables    
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
@@ -169,25 +169,11 @@ def add_new_resources_to_db(res_ids):
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
             erf_type = erf_dict['resource_type'] # create a list out of types 
  
-            add_subject_and_core_to_db(erf_subj, erf_core, rid)
-            type_stmt = "INSERT INTO type (type) VALUES (?)"
-            rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
-            for term in erf_type:
-                c.execute("SELECT tid FROM type WHERE type=?", (term,))
-                is_type = c.fetchone()
-                if is_type is not None:
-                    tid = is_type[0]
-                else:
-                    c.execute(type_stmt, (term,))
-                    conn.commit()
-                    tid = c.lastrowid
-                c.execute(rt_bridge_stmt, (rid, tid))
-                conn.commit()
+            add_subject_and_core_to_db(erf_subj, erf_core, rid) #passing subject list, core list to add subject function
+  
             if "alternate_title" in erf_dict: 
                 erf_alt = erf_dict['alternate_title']
-                alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
-                for term in erf_alt:
-                    c.execute(alt_title_stmt, (term, rid))  
+          
             
             print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
            
@@ -224,7 +210,33 @@ def add_subject_and_core_to_db(subj_list, core_list, rid):
                         is_core = 1
             c.execute(rs_bridge_stmt, (rid,sid, is_core))
             conn.commit()
-
+            
+def add_type_to_db(type_list, rid):
+    '''Takes a list of ERF types & resource ID and adds to the local sqlite db.'''
+    print "Adding types.... "
+    type_stmt = "INSERT INTO type (type) VALUES (?)"
+    rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
+    with sqlite3.connect(db_filename) as conn:
+        c = conn.cursor()    
+        for term in erf_type:
+            c.execute("SELECT tid FROM type WHERE type=?", (term,))
+            is_type = c.fetchone()
+            if is_type is not None:
+                tid = is_type[0]
+            else:
+                c.execute(type_stmt, (term,))
+                conn.commit()
+                tid = c.lastrowid
+            c.execute(rt_bridge_stmt, (rid, tid))
+            conn.commit
+            
+def add_alt_title(alt_title_list, rid):
+    with sqlite3.connect(db_filename) as conn:
+        c = conn.cursor()    
+        alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
+        for term in erf_alt:
+            c.execute(alt_title_stmt, (term, rid))  
+            
 def update_resources_in_db(update_list):
     '''Takes a list of resource ids, gets the erf_dict of each rid from page_parse(), then updates the local database directly
     and calls functions to also add new subject terms &/or remove terms.'''
@@ -245,24 +257,27 @@ def update_resources_in_db(update_list):
             
             conn.commit()
             rid = cursor.lastrowid #capture last row id of resource
-            #all below code could be moved to function that handles
             erf_subj = erf_dict['subject'] # create a list out of subject terms
             subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
             cursor.execute(subjects, (rid,))
             subject_terms = cursor.fetchall()
-            new_subjects = set(erf_subj)-set(subject_terms)
-            remove_subjects = set(subject_terms)-set(erf_subj)
+            new_subjects = set(erf_subj)-set(subject_terms)#diff b/t erf_subjects and subject terms in DB to determine new subjects
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+            new_core = set(erf_core)-set(core_terms)
+            if new_subjects:
+                add_subject_and_core_to_db(new_subjects, new_core, rid) 
+            remove_subjects = set(subject_terms)-set(erf_subj)#dif b/t subj terms in db & erf to see what to remove from db
+            if remove_subjects:
+                print remove_subjects #need to pass remove subjects list to a remove_subject(): function
             core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
             cursor.execute(core_terms_stmt, (rid,))
             core_terms = cursor.fetchall()
-            new_core = set(erf_core)-set(core_terms)
             remove_core = set(core_terms) - set(erf_core)
-            if new_subjects:
-                add_subject_and_core_to_db(new_subjects, new_core, rid) 
-            if remove_subjects:
-                print subjects #need to pass remove subjects list to a remove_subject(): function
+        
+
             erf_type = erf_dict['resource_type'] # create a list out of types 
+            if erf_type:
+                
             # need sql queries for types and then a add type and remove type function
             print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
 
