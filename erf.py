@@ -169,7 +169,7 @@ def add_new_resources_to_db(res_ids):
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
             erf_type = erf_dict['resource_type'] # create a list out of types 
  
-                
+            add_subject_and_core_to_db(erf_subj, erf_core, rid)
             type_stmt = "INSERT INTO type (type) VALUES (?)"
             rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
             for term in erf_type:
