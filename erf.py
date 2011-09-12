@@ -113,6 +113,7 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     appropriate functions to add, update or unpublish.'''
     local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
     erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates) #unzipping the 2-tuple list so we can find diff
+    erf_resids = [int(i) for i in erf_resids]
     new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids from ERF that aren't in local db
     if new_resids: #see if new_resids list has
         add_new_resources_to_db(new_resids)
