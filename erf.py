@@ -101,7 +101,7 @@ def get_erf_resids_and_lastupdates(erf_res_ids):
     detail = 'cmd=detail&'
     erf_res_ids_last_mod = []
     for rid in erf_res_ids:
-        print rid
+        #print rid
         erf_dict = parse_page(rid)
         last_update = erf_dict['record_last_modified']
         erf_res_ids_last_mod.append((rid, last_update)) #need to add as tuple
@@ -135,7 +135,9 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
 def add_new_resources_to_db(res_ids): 
     '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
     the resources to a local sqlite db. Calls other functions to add subjects & types.'''
-    create_db_tables() #currently drops existing tables    
+    if not os.path.exists(db_filename):
+    #create new DB, create table stocks
+        create_db_tables() #currently drops existing tables    
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
     print "Adding new resources to the database."
@@ -249,7 +251,7 @@ def add_type_to_db(type_list, rid):
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()    
-        for term in erf_type:
+        for term in type_list:
             c.execute("SELECT tid FROM type WHERE type=?", (term,))
             is_type = c.fetchone()
             if is_type is not None:
@@ -342,8 +344,7 @@ def main():
     for o, a in opts:
         if o in ("-u", "--update"):
             #need function that updates db 
-            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), get_erf_resids_and_lastupdates(get_resource_ids()))                                                   
-            usage()
+            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), get_erf_resids_and_lastupdates(get_resource_ids()))
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
