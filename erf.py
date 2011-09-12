@@ -19,6 +19,7 @@ def parse_page(rid):
     '''Takes a resource_id (rid), fetches erf detail page, parses html, & returns a dict representing an erf entry'''
     detail = 'cmd=detail&'
     resid_slug = 'resId='
+    rid = str(rid)
     response = urllib2.urlopen(baseurl+detail+resid_slug+rid) # poss. move opening, reading and returning html of erf resource detail to own funciton
     html = response.read().decode('latin1')
     if html.find(u'Centre\xc3\xa2\xc2\x80\xc2\x99s'):
