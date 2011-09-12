@@ -11,22 +11,12 @@ import getopt
 import sys
 import xmlwitch
 
-
-"""
-1.access by type erf and findall resourcetypes
-2.open each resourceid pages and findall resourceIDs, we also will need to persist these ids in DB, but might
- be part of record page
-3. open each http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=[#]
-and then parse html into sqlite3 db - need to model db. am assuming will create a dictionary
-for this. will need to keep up what resId are already saved to db and use logic not to add
-duplicates
-"""
 baseurl = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 db_filename = 'erf.sqlite'
 RETRY_DELAY = 2
 
 def parse_page(rid):
-    '''Takes in erf html page & parses html and returns a dict representing an erf entry'''
+    '''Takes a resource_id (rid), fetches erf detail page, parses html, & returns a dict representing an erf entry'''
     detail = 'cmd=detail&'
     resid_slug = 'resId='
     response = urllib2.urlopen(baseurl+detail+resid_slug+rid) # poss. move opening, reading and returning html of erf resource detail to own funciton
@@ -61,7 +51,7 @@ def parse_page(rid):
     return erf_dict
 
 def create_db_tables():
-    '''Creates tables for in erf.sqlite, if tables already exist, will drop them.'''
+    '''Creates tables for in erf.sqlite, If tables already exist, will drop them.'''
     print "Creating database and tables..."
     schema = 'erf_schema.sql'
     with sqlite3.connect(db_filename) as conn:
@@ -71,7 +61,7 @@ def create_db_tables():
         conn.executescript(schema)
 
 def get_resource_ids():
-    """Returns a unique set of ERF resource ids open erf by type page & pull out all resTypeId=\d+ as array"""
+    """Returns a set() of ERF resource ids from the ERF."""
     all_res_types = 'cmd=allResTypes'
     search_res_types = 'cmd=searchResType&'
     response = urllib2.urlopen(baseurl+all_res_types)
@@ -123,15 +113,15 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     appropriate functions to add, update or unpublish.'''
     local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
     erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates) #unzipping the 2-tuple list so we can find diff
-    new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids from ERF
-    if new_resids: #see if new_resids list has ids 
+    new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids from ERF that aren't in local db
+    if new_resids: #see if new_resids list has
         add_new_resources_to_db(new_resids)
     unpublish_resids = set(local_resids)-set(erf_resids)#should tell us what's has been removed from ERF & needs unpublishing
     if unpublish_resids: #see if there are any resources needing to be unpublished
         #need to add function that will flag resource as unpublished in db and either not add to ATOM feed or add a flag to it.
         print unpublish_resids 
     update_resids = []
-    for lids, ldate in local_resids_and_dates:
+    for lids, ldate in local_resids_and_dates: #since workign with 2-lists need to match id & then compare dates
         for rids, rdate in erf_res_ids_and_dates:
             if lids == rids:
                 if ldate != rdate: #if the dates of local and erf are different
@@ -165,16 +155,15 @@ def add_new_resources_to_db(res_ids):
             
             conn.commit()
             rid = c.lastrowid #capture last row id of resource
-            erf_subj = erf_dict['subject'] # create a list out of subject terms
+            erf_subj = erf_dict['subject'] # create a list out of subject terms        
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+            add_subject_and_core_to_db(erf_subj, erf_core, rid) #passing subject list, core list to add subject function            
             erf_type = erf_dict['resource_type'] # create a list out of types 
- 
-            add_subject_and_core_to_db(erf_subj, erf_core, rid) #passing subject list, core list to add subject function
-  
+            if "resource_type" in erf_dict: #need to instead test to see if 'resource_type' is empty
+                add_type_to_db(erf_type, rid)            
             if "alternate_title" in erf_dict: 
                 erf_alt = erf_dict['alternate_title']
-          
-            
+                add_alt_title(erf_alt, rid)          
             print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
            
         except sqlite3.ProgrammingError as err:
@@ -187,6 +176,48 @@ def add_new_resources_to_db(res_ids):
     c.execute("select rid from resource")
     print "No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids)
     conn.close()
+
+def update_resources_in_db(update_list):
+    '''Takes a list of resource ids needing updating, gets the erf_dict of each rid from page_parse(), then updates the 
+    local database directly and calls functions to also add new subject terms &/or remove terms.'''
+    print "Updating resources..."
+    with sqlite3.connect(db_filename) as conn:
+        cursor = conn.cursor()
+        for id in update_list:
+            query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
+             """
+            erf_dict = parse_page(id)
+            cursor.execute(resource_stmt, {"erf_dict['title']":title, 
+                                           "erf_dict['text']":text,
+                                           "erf_dict['brief_description']":description, 
+                                           "erf_dict['publication_dates_covered']":coverage,
+                                           "erf_dict['licensing_restriction']":licensing,
+                                           "erf_dict['record_last_modified']":last_modified,
+                                           "erf_dict['url']":url,}) # adding fields to the resource table in db
+            
+            conn.commit()
+            rid = cursor.lastrowid #capture last row id of resource
+            erf_subj = erf_dict['subject'] # create a list out of subject terms
+            subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
+            cursor.execute(subjects, (rid,))
+            subject_terms = cursor.fetchall()
+            new_subjects = set(erf_subj)-set(subject_terms)#diff b/t erf_subjects and subject terms in DB to determine new subjects
+            erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+            core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
+            cursor.execute(core_terms_stmt, (rid,))
+            core_terms = cursor.fetchall()
+            new_core = set(erf_core)-set(core_terms)
+            if new_subjects:
+                add_subject_and_core_to_db(new_subjects, new_core, rid) 
+            remove_subjects = set(subject_terms)-set(erf_subj)#dif b/t subj terms in db & erf to see what to remove from db
+            remove_core = set(core_terms) - set(erf_core)
+            if remove_subjects:
+                print remove_subjects #need to pass remove subjects list to a remove_subject(): function
+            erf_type = erf_dict['resource_type'] # create a list out of types 
+            if erf_type:
+                print erf_type 
+            # need sql queries for types and then a add type and remove type function
+            print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
 
 def add_subject_and_core_to_db(subj_list, core_list, rid):
     '''Takes a subject list, a core subject list and a resource id and adds those to the local db.'''
@@ -231,57 +262,16 @@ def add_type_to_db(type_list, rid):
             conn.commit
             
 def add_alt_title(alt_title_list, rid):
+    '''Takes a alternate title list & resource id and adds it to the database.'''
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()    
         alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
         for term in erf_alt:
             c.execute(alt_title_stmt, (term, rid))  
-            
-def update_resources_in_db(update_list):
-    '''Takes a list of resource ids, gets the erf_dict of each rid from page_parse(), then updates the local database directly
-    and calls functions to also add new subject terms &/or remove terms.'''
-    print "Updating resources..."
-    with sqlite3.connect(db_filename) as conn:
-        cursor = conn.cursor()
-        for id in update_list:
-            query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
-             """
-            erf_dict = parse_page(id)
-            cursor.execute(resource_stmt, {"erf_dict['title']":title, 
-                                           "erf_dict['text']":text,
-                                           "erf_dict['brief_description']":description, 
-                                           "erf_dict['publication_dates_covered']":coverage,
-                                           "erf_dict['licensing_restriction']":licensing,
-                                           "erf_dict['record_last_modified']":last_modified,
-                                           "erf_dict['url']":url,}) # adding fields to the resource table in db
-            
-            conn.commit()
-            rid = cursor.lastrowid #capture last row id of resource
-            erf_subj = erf_dict['subject'] # create a list out of subject terms
-            subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
-            cursor.execute(subjects, (rid,))
-            subject_terms = cursor.fetchall()
-            new_subjects = set(erf_subj)-set(subject_terms)#diff b/t erf_subjects and subject terms in DB to determine new subjects
-            erf_core = erf_dict['core_subject'] # create a list out of core subject terms
-            core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
-            cursor.execute(core_terms_stmt, (rid,))
-            core_terms = cursor.fetchall()
-            new_core = set(erf_core)-set(core_terms)
-            if new_subjects:
-                add_subject_and_core_to_db(new_subjects, new_core, rid) 
-            remove_subjects = set(subject_terms)-set(erf_subj)#dif b/t subj terms in db & erf to see what to remove from db
-            remove_core = set(core_terms) - set(erf_core)
-            if remove_subjects:
-                print remove_subjects #need to pass remove subjects list to a remove_subject(): function
-            erf_type = erf_dict['resource_type'] # create a list out of types 
-            if erf_type:
-                
-            # need sql queries for types and then a add type and remove type function
-            print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
-
-                    
+                                
 def write_to_atom():
-    '''Writes out ERF data in local SQLite db into ATOM schema extended with Dublin Core.'''
+    '''Writes out ERF data from local SQLite db into ATOM schema extended with Dublin Core. Notifies pubsubhubbub 
+    service that a new update is ready for consuming.'''
     detail = 'cmd=detail&'
     atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     erf_atom_filename = 'erf-atom.xml'
