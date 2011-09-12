@@ -135,9 +135,6 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
 def add_new_resources_to_db(res_ids): 
     '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
     the resources to a local sqlite db. Calls other functions to add subjects & types.'''
-    if not os.path.exists(db_filename):
-    #create new DB, create table stocks
-        create_db_tables() #currently drops existing tables    
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
     print "Adding new resources to the database."
@@ -246,7 +243,6 @@ def add_subject_and_core_to_db(subj_list, core_list, rid):
             
 def add_type_to_db(type_list, rid):
     '''Takes a list of ERF types & resource ID and adds to the local sqlite db.'''
-    print "Adding types.... "
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
     with sqlite3.connect(db_filename) as conn:
@@ -349,6 +345,7 @@ def main():
             usage()
             sys.exit()
         elif o in ("-c", "--create"):
+            create_db_tables()
             add_new_resources_to_db(get_resource_ids())
         elif o in ("-a", "--atom"):
             write_to_atom()
