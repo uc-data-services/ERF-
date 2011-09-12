@@ -340,7 +340,10 @@ def main():
     for o, a in opts:
         if o in ("-u", "--update"):
             #need function that updates db 
-            resids_needing_updating_and_adding(get_local_resids_and_update_dates(), get_erf_resids_and_lastupdates(get_resource_ids()))
+            erf_resource_ids = get_resource_ids()
+            erf_ids_and_updates = get_erf_resids_and_lastupdates(erf_resource_ids)
+            local_resids_updates = get_local_resids_and_update_dates()
+            resids_needing_updating_and_adding(local_resids_updates, erf_ids_and_updates)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
