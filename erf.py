@@ -268,7 +268,7 @@ def add_alt_title(alt_title_list, rid):
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()    
         alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
-        for term in erf_alt:
+        for term in alt_title_list:
             c.execute(alt_title_stmt, (term, rid))  
                                 
 def write_to_atom():
