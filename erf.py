@@ -189,7 +189,7 @@ def update_resources_in_db(update_list):
             query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
             erf_dict = parse_page(id)
-            cursor.execute(resource_stmt, {"erf_dict['title']":title, 
+            cursor.execute(query, {"erf_dict['title']":title, 
                                            "erf_dict['text']":text,
                                            "erf_dict['brief_description']":description, 
                                            "erf_dict['publication_dates_covered']":coverage,
