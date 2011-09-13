@@ -185,7 +185,8 @@ def update_resources_in_db(update_list):
     print "Updating resources..."
     with sqlite3.connect(db_filename) as conn:
         cursor = conn.cursor()
-        for id in update_list:
+        for resid in update_list:
+            #rid = id
             query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
             erf_dict = parse_page(id)
@@ -197,7 +198,7 @@ def update_resources_in_db(update_list):
                                            'licensing':licensing,
                                            'last_modified':last_modified,
                                            'url':url, 
-                                           'id':resource_id}) # adding fields to the resource table in db
+                                           'resid':resource_id}) # adding fields to the resource table in db
             
             conn.commit()
             rid = cursor.lastrowid #capture last row id of resource
