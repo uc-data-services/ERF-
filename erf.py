@@ -198,7 +198,7 @@ def update_resources_in_db(update_list):
                                            'licensing':licensing,
                                            'last_modified':last_modified,
                                            'url':url, 
-                                           'resid':resource_id}) # adding fields to the resource table in db
+                                           'resid':resource_id,}) # adding fields to the resource table in db
             
             conn.commit()
             rid = cursor.lastrowid #capture last row id of resource
