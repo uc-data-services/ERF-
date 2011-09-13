@@ -189,13 +189,14 @@ def update_resources_in_db(update_list):
             query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
             erf_dict = parse_page(id)
-            cursor.execute(query, {"erf_dict['title']":title, 
-                                           "erf_dict['text']":text,
-                                           "erf_dict['brief_description']":description, 
-                                           "erf_dict['publication_dates_covered']":coverage,
-                                           "erf_dict['licensing_restriction']":licensing,
-                                           "erf_dict['record_last_modified']":last_modified,
-                                           "erf_dict['url']":url,}) # adding fields to the resource table in db
+            title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
+            cursor.execute(query, {'title':title, 
+                                           'text':text,
+                                           'description':description, 
+                                           'coverage':coverage,
+                                           'licensing':licensing,
+                                           'last_modified':last_modified,
+                                           'url':url,}) # adding fields to the resource table in db
             
             conn.commit()
             rid = cursor.lastrowid #capture last row id of resource
