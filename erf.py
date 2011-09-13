@@ -186,7 +186,7 @@ def update_resources_in_db(update_list):
     with sqlite3.connect(db_filename) as conn:
         cursor = conn.cursor()
         for resid in update_list:
-            #rid = id
+            resid = resid
             query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
             erf_dict = parse_page(resid)
