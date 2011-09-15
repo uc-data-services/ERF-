@@ -208,22 +208,22 @@ def update_resources_in_db(update_list):
             subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
             cursor.execute(subjects, (rid,))
             subject_terms = cursor.fetchall()
-            new_subjects = set(erf_subj)-set(subject_terms)#diff b/t erf_subjects and subject terms in DB to determine new subjects
-            erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+            new_subjects = set(erf_subj)-set(subject_terms)#diff b/t erf_subjects and subject terms in DB to determine new subjects                        
+            if new_subjects:
+                add_or_update_subject(new_subjects, rid) #adds new subjects
+            erf_core = erf_dict['core_subject'] # create a list out of core subject terms            
             core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"# pull out core terms
             cursor.execute(core_terms_stmt, (rid,))
             core_terms = cursor.fetchall()
-            new_core = set(erf_core)-set(core_terms) #need to also check for removal
+            new_core = set(erf_core)-set(core_terms) #need to also check for removal            
             if new_core: #there's somethign in new_core, then call method
-                add = "add"
-                add_or_update_core(erf_core, rid)
-            if new_subjects:
-                add_or_update_subject(new_subjects, rid) 
+                add = True
+                add_or_update_core(add, erf_core, rid)
             remove_subjects = set(subject_terms)-set(erf_subj)#dif b/t subj terms in db & erf to see what to remove from db
             remove_core = set(core_terms) - set(erf_core)
             if remove_core:
-                remove = "remove"
-                add_or_update_core(remove, remove_core, rid)
+                add = False #set add to false so function will remove
+                add_or_update_core(add, remove_core, rid)
             if remove_subjects:
                 print remove_subjects #need to pass remove subjects list to a remove_subject(): function
             erf_type = erf_dict['resource_type'] # create a list out of types 
@@ -232,20 +232,27 @@ def update_resources_in_db(update_list):
             # need sql queries for types and then a add type and remove type function
             print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
 
-def add_or_update_core(operation, erf_core, rid):
+def add_or_update_core(add, erf_core, rid):
+    '''Takes an add boolean (true=add, false=remove), erf_core list & rid and adds or updates the database.'''
     print erf_core, rid
+    rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()
-        if operation is "add":
-            for core_term in core_list:
+        add_stmt = "INSERT"
+        remove_stmt = "UPDATE"
+        sid_stmt = "SELECT sid FROM subject WHERE term=?"
+        for core_term in erf_core:
+            c.execute("SELECT sid FROM subject WHERE term=?", (core_term,))    
+            is_term = c.fetchone()
+            if add:
                 if core_term == term:
                     is_core = 1
+            else: #false means remove
+                print erf_core                 
 
 def add_or_update_subject(subj_list, rid):
     '''Takes a subject list, a core subject list and a resource id and adds those to the local db.'''
     subject_stmt = "INSERT INTO subject (term) VALUES (?)"
-    rs_bridge_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
-    is_core = 0
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()
         for term in subj_list:
@@ -253,7 +260,7 @@ def add_or_update_subject(subj_list, rid):
             is_term = c.fetchone()
             c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?",(is_term[0],rid))
             is_resid = c.fetchone()
-            if is_term is not None & is_resid is None: #term exists in db & doesn't have rid
+            if is_term is not None: #term exists in db & doesn't have rid
                 sid = is_term[0]
             else:    
                 c.execute(subject_stmt, (term,))
