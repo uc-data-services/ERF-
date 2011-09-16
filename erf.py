@@ -138,7 +138,7 @@ def cancel_resource(canceled_resources):
     '''Takes a list of resources that are no longer in the ERF and flags them as canceled in db.'''
     with sqlite3.connect(db_filename) as conn:
         cancel_stmt = "UPDATE resource SET is_canceled = 1 WHERE resource_id = ?"
-        for each resid in canceled_resources:
+        for resid in canceled_resources:
             c.execute(cancel_stmt, (resid,))
         conn.close()
 
