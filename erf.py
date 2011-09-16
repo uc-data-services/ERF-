@@ -119,10 +119,9 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     new_resids = set(erf_resids)-set(local_resids) #should get back a list of new resource ids from ERF that aren't in local db
     if new_resids: #see if new_resids list has
         add_new_resources_to_db(new_resids)
-    unpublish_resids = set(local_resids)-set(erf_resids)#should tell us what's has been removed from ERF & needs unpublishing
-    if unpublish_resids: #see if there are any resources needing to be unpublished
-        #need to add function that will flag resource as unpublished in db and either not add to ATOM feed or add a flag to it.
-        print unpublish_resids 
+    canceled_resources = set(local_resids)-set(erf_resids)#should tell us what's has been removed from ERF & needs unpublishing
+    if canceled_resources: #see if there are any resources needing to be unpublished
+        cancel_resource(canceled_resources)
     update_resids = []
     for lids, ldate in local_resids_and_dates: #since workign with 2-lists need to match id & then compare dates
         for rids, rdate in erf_res_ids_and_dates:
@@ -132,8 +131,16 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     if update_resids:  #see if there are resources needing updating
         update_resources_in_db(update_resids)
     print "Number of new resouces: ", len(new_resids)
-    print "Number of resources needing unpublishing: ", len(unpublish_resids)
+    print "Number of resources needing unpublishing: ", len(canceled_resources)
     print "Number of resources needing updating: ", len(update_resids)
+
+def cancel_resource(canceled_resources):
+    '''Takes a list of resources that are no longer in the ERF and flags them as canceled in db.'''
+    with sqlite3.connect(db_filename) as conn:
+        cancel_stmt = "UPDATE resource SET is_canceled = 1 WHERE resource_id = ?"
+        for each resid in canceled_resources:
+            c.execute(cancel_stmt, (resid,))
+        conn.close()
 
 def add_new_resources_to_db(res_ids): 
     '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
