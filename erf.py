@@ -259,17 +259,13 @@ def add_or_update_subject(subj_list, rid):
         for term in subj_list:
             c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
             is_term = c.fetchone()
-            c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?",(is_term[0],rid))
-            is_resid = c.fetchone()
             if is_term is not None: #term exists in db & doesn't have rid
                 sid = is_term[0]
             else:    
                 c.execute(subject_stmt, (term,))
                 conn.commit()
                 sid = c.lastrowid
-
-            c.execute(rs_bridge_stmt, (rid, sid, is_core))
-            conn.commit()
+        conn.commit()
             
 def add_type_to_db(type_list, rid):
     '''Takes a list of ERF types & resource ID and adds to the local sqlite db.'''
