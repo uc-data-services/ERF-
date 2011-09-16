@@ -253,7 +253,7 @@ def add_or_update_core(add, erf_core, rid):
             is_term = c.fetchone() # we can assume that subject term exists and has already been added to db
             sid = is_term[0]
             if add:
-                c.execute(add_stmt, (rid, sid, is_core)
+                c.execute(add_stmt, (rid, sid, is_core))
             else: #false means remove
                 c.execute(remove_stmt, (sid, rid))
             conn.commit()
