@@ -129,6 +129,7 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
                 if ldate != rdate: #if the dates of local and erf are different
                     update_resids.append(rids)
     if update_resids:  #see if there are resources needing updating
+        print update_resids
         update_resources_in_db(update_resids)
     print "Number of new resouces: ", len(new_resids)
     print "Number of resources needing unpublishing: ", len(canceled_resources)
