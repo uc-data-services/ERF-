@@ -166,7 +166,7 @@ def add_new_resources_to_db(res_ids):
             conn.commit()
             rid = c.lastrowid #capture last row id of resource
             erf_subj = erf_dict['subject'] # create a list out of subject terms                    
-            add_or_update_subject(erf_subj, erf_core, rid) #passing subject list, core list to add subject function            
+            add_or_update_subject(erf_subj, rid) #passing subject list, core list to add subject function            
             erf_core = erf_dict['core_subject'] # create a list out of core subject terms 
             add = True #set add to true so add_or_update_core() knows to add not remove 
             add_or_update_core(add, erf_core, rid)
