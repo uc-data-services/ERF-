@@ -9,7 +9,7 @@ CREATE TABLE r_s_bridge (
     rid INTEGER NOT NULL,
     sid INTEGER NOT NULL,
     is_core BOOL DEFAULT (0), 
-    PRIMARY KEY (rid,sid))
+    PRIMARY KEY (rid,sid));
 
 CREATE TABLE r_t_bridge (
     rid INTEGER NOT NULL , 
