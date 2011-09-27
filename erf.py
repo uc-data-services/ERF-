@@ -311,7 +311,7 @@ def write_to_atom():
     erf_atom_filename = 'erf-atom.xml'
     now = datetime.datetime.now()
     with sqlite3.connect(db_filename) as conn:
-        with open(atom_xml_write_directory+erf_atom_filename, mode='w') as atom:      
+        with open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:      
             cursor = conn.cursor()
             resids = "SELECT rid FROM resource"
             cursor.execute(resids)
