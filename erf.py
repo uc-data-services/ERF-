@@ -131,6 +131,8 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     if update_resids:  #see if there are resources needing updating
         print update_resids
         update_resources_in_db(update_resids)
+    if new_resids or canceled_resources or update_resids: #if any changes write out new atom feed
+        write_to_atom()
     print "Number of new resouces: ", len(new_resids)
     print "Number of resources needing unpublishing: ", len(canceled_resources)
     print "Number of resources needing updating: ", len(update_resids)
@@ -384,6 +386,7 @@ def main():
         elif o in ("-c", "--create"):
             create_db_tables()
             add_new_resources_to_db(get_resource_ids())
+            write_to_atom()
         elif o in ("-a", "--atom"):
             write_to_atom()
         else:
