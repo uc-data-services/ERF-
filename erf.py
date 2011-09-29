@@ -11,6 +11,8 @@ import getopt
 import sys
 import xmlwitch
 from pubsubhubbub_publish import * 
+from rfc3339 import rfc3339
+import uuid
 
 baseurl = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 db_filename = 'erf.sqlite'
@@ -310,7 +312,7 @@ def write_to_atom():
     detail = 'cmd=detail&'
     atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     erf_atom_filename = 'erf-atom.xml'
-    now = datetime.datetime.now()
+    now = rfc3339(datetime.datetime.now())
     with sqlite3.connect(db_filename) as conn:
         with open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:      
             cursor = conn.cursor()
@@ -318,15 +320,17 @@ def write_to_atom():
             cursor.execute(resids)
             rids = cursor.fetchall()
             rids = [rid[0] for rid in rids]
+            erf_url = 'library.berkeley.edu/find/types/electronic_resources.html'
             xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
             with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
                 xml.title('Eelectronic Resources - UC Berkeley Library')
-                xml.updated(now.strftime("%Y-%m-%d %H:%M"))
+                xml.updated(now)
                 xml.link(href="http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml", rel="self", type="application/atom+xml")
                 xml.link(rel="hub", href="https://pubsubhubbub.appspot.com")
+                xml.id(uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html'))
                 with xml.author:
                     xml.name('UC Berkeley The Library')
-                    xml.id('http://www.lib.berkeley.edu')
+                    xml.id(uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu'))
                 for rid in rids:
                     #rid = str(rid)
                     resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
@@ -349,7 +353,7 @@ def write_to_atom():
                     with xml.entry:
                         xml.title(title)
                         xml.id(url_id)
-                        xml.updated(last_modified)
+                        xml.updated(rfc3339(last_modified))
                         xml.dc__description(description)
                         if coverage != "NULL":
                             xml.dc__coverage(coverage)
