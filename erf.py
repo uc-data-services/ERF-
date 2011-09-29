@@ -320,8 +320,8 @@ def write_to_atom():
             cursor.execute(resids)
             rids = cursor.fetchall()
             rids = [rid[0] for rid in rids]
-            erf_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html')
-            library_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu')
+            erf_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html'))
+            library_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu'))
             xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
             with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
                 xml.title('Eelectronic Resources - UC Berkeley Library')
