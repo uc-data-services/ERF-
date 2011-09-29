@@ -320,17 +320,18 @@ def write_to_atom():
             cursor.execute(resids)
             rids = cursor.fetchall()
             rids = [rid[0] for rid in rids]
-            erf_url = uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html')
+            erf_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html')
+            library_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu')
             xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
             with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
                 xml.title('Eelectronic Resources - UC Berkeley Library')
                 xml.updated(now)
                 xml.link(href="http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml", rel="self", type="application/atom+xml")
                 xml.link(rel="hub", href="https://pubsubhubbub.appspot.com")
-                xml.id()
+                xml.id(erf_uuid)
                 with xml.author:
                     xml.name('UC Berkeley The Library')
-                    xml.id(uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu'))
+                    xml.id(library_uuid)
                 for rid in rids:
                     #rid = str(rid)
                     resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
