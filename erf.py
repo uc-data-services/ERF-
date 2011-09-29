@@ -371,7 +371,7 @@ def publish_to_hub():
     try:     
         publish('https://pubsubhubbub.appspot.com', 
                 'http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml')
-        print "Publishing your feed to pubsubhubbub.appspot.com"
+        print "Publishing the atom feed to pubsubhubbub.appspot.com"
 
     except PublishError, e:
         print e
