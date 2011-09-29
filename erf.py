@@ -10,6 +10,7 @@ import time
 import getopt
 import sys
 import xmlwitch
+from pubsubhubbub_publish import * 
 
 baseurl = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 db_filename = 'erf.sqlite'
@@ -364,7 +365,17 @@ def write_to_atom():
                         xml.url(url)              
             print(xml)
             atom.write(str(xml))
-    
+            publish_to_hub()
+
+def publish_to_hub():
+    try:     
+        publish('https://pubsubhubbub.appspot.com', 
+                'http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml')
+        print "Publishing your feed to pubsubhubbub.appspot.com"
+
+    except PublishError, e:
+        print e
+
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "huca", ["help", "update", "create", "atom"])
