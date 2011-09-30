@@ -266,19 +266,25 @@ def add_or_update_core(add, erf_core, rid):
 
 def add_or_update_subject(subj_list, rid):
     '''Takes a subject list, a core subject list and a resource id and adds those to the local db.'''
-    subject_stmt = "INSERT INTO subject (term) VALUES (?)"
+    add_subject_stmt = "INSERT INTO subject (term) VALUES (?)"
+    link_subj_rid_stmt = "INSERT INTO r_s_bridge (rid,sid) VALUES (?,?)"
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()
         for term in subj_list:
             c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
-            is_term = c.fetchone()
-            if is_term is not None: #term exists in db & doesn't have rid
-                sid = is_term[0]
+            has_term = c.fetchone()
+            if has_term is not None: #term exists in db & doesn't have rid
+                sid = has_term[0]
+                c.execute("SELECT rid FROM r_s_bridge WHERE sid=?", (sid,))
+                has_rid = c.fetchone()
+                if has_rid is None:
+                    c.execute(link_subj_rid_stmt, (rid, sid)) 
+                    conn.commit()
             else:    
-                c.execute(subject_stmt, (term,))
-                conn.commit()
+                c.execute(add_subject_stmt, (term,))
                 sid = c.lastrowid
-        conn.commit()
+                c.execute(link_subj_rid_stmt, (rid, sid))
+                conn.commit()
             
 def add_type_to_db(type_list, rid):
     '''Takes a list of ERF types & resource ID and adds to the local sqlite db.'''
