@@ -302,7 +302,7 @@ def add_type_to_db(type_list, rid):
                 conn.commit()
                 tid = c.lastrowid
             c.execute(rt_bridge_stmt, (rid, tid))
-            conn.commit
+            conn.commit()
             
 def add_alt_title(alt_title_list, rid):
     '''Takes a alternate title list & resource id and adds it to the database.'''
@@ -311,6 +311,7 @@ def add_alt_title(alt_title_list, rid):
         alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
         for term in alt_title_list:
             c.execute(alt_title_stmt, (term, rid))  
+            conn.commit()
                                 
 def write_to_atom():
     '''Writes out ERF data from local SQLite db into ATOM schema extended with Dublin Core. Notifies pubsubhubbub 
