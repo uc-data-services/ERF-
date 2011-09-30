@@ -249,7 +249,7 @@ def update_resources_in_db(update_list):
 def add_or_update_core(add, erf_core, rid):
     '''Takes an add boolean (true=add, false=remove), erf_core list & rid and adds or updates the database.'''
     print erf_core, rid
-    add_stmt = "INSERT INTO r_s_bridge (rid, sid, is_core) VALUES (?,?,?)"
+    add_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     remove_stmt = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
     is_core = 1
     with sqlite3.connect(db_filename) as conn:
@@ -260,7 +260,7 @@ def add_or_update_core(add, erf_core, rid):
             sid = is_term[0]
             print sid
             if add:
-                c.execute(add_stmt, (rid, sid, is_core))
+                c.execute(add_stmt, (is_core, sid, rid))
             else: #false means remove
                 c.execute(remove_stmt, (sid, rid))
             conn.commit()
