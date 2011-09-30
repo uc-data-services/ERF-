@@ -341,6 +341,7 @@ def write_to_atom():
                     cursor.execute(resource_details_stmt, (rid,))
                     resource_details_db = cursor.fetchone()
                     title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
+                    last_modified = last_modified + 'T12:00:00-07:00' #2011-09-29T19:20:26-07:00
                     cursor.execute(subjects, (rid,))
                     subjects_db = cursor.fetchall()
                     subjects_db = [subject[0] for subject in subjects_db]
@@ -354,7 +355,7 @@ def write_to_atom():
                     with xml.entry:
                         xml.title(title)
                         xml.id(url_id)
-                        xml.updated(rfc3339(last_modified))
+                        xml.updated(last_modified)
                         xml.dc__description(description)
                         if coverage != "NULL":
                             xml.dc__coverage(coverage)
