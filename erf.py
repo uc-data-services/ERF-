@@ -326,8 +326,8 @@ def write_to_atom():
             with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
                 xml.title('Eelectronic Resources - UC Berkeley Library')
                 xml.updated(now)
-                xml.link(href="http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml", rel="self", type="application/atom+xml")
-                xml.link(rel="hub", href="https://pubsubhubbub.appspot.com")
+                xml.link(href='http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml', rel='self', type='application/atom+xml')
+                xml.link(rel='hub', href='https://pubsubhubbub.appspot.com')
                 xml.id(erf_uuid)
                 with xml.author:
                     xml.name('UC Berkeley The Library')
@@ -351,7 +351,7 @@ def write_to_atom():
                     cursor.execute(types_stmt, (rid,))
                     types = cursor.fetchall()
                     types = [a_type[0] for a_type in types]
-                    url_id = baseurl+detail+str(resource_id)
+                    url_id = baseurl+detail+'resId='+str(resource_id)
                     with xml.entry:
                         xml.title(title)
                         xml.id(url_id)
@@ -368,7 +368,7 @@ def write_to_atom():
                             xml.dc__alternate(a_title)
                         for type in types:
                             xml.dc__type(type)
-                        xml.url(url)              
+                        xml.link(herf=url)              
             print(xml)
             atom.write(str(xml))
             publish_to_hub()
