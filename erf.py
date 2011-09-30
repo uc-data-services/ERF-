@@ -258,6 +258,7 @@ def add_or_update_core(add, erf_core, rid):
             c.execute("SELECT sid FROM subject WHERE term=?", (core_term,))    
             is_term = c.fetchone() # we can assume that subject term exists and has already been added to db
             sid = is_term[0]
+            print sid
             if add:
                 c.execute(add_stmt, (rid, sid, is_core))
             else: #false means remove
