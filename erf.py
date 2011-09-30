@@ -261,9 +261,10 @@ def add_or_update_core(add, erf_core, rid):
             print sid
             if add:
                 c.execute(add_stmt, (is_core, sid, rid))
+                conn.commit()
             else: #false means remove
                 c.execute(remove_stmt, (sid, rid))
-            conn.commit()
+                conn.commit()
 
 def add_or_update_subject(subj_list, rid):
     '''Takes a subject list, a core subject list and a resource id and adds those to the local db.'''
