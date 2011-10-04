@@ -275,11 +275,11 @@ def add_or_update_subject(subj_list, rid):
         for term in subj_list:
             c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
             has_term = c.fetchone()
-            if has_term: #term exists in db & doesn't have rid
+            if has_term: #term exists in subject table assign its sid ot sid variable
                 sid = has_term[0]
-                c.execute("SELECT rid FROM r_s_bridge WHERE sid=?", (sid,))
+                c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?", (sid,rid)) #seeing if the term sid & rid are linked via the r_s_bridge
                 has_rid = c.fetchone()
-                if not has_rid:
+                if not has_rid: #if doesn't have 
                     c.execute(link_subj_rid_stmt, (rid, sid)) 
                     conn.commit()
             else:    
