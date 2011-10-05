@@ -33,7 +33,9 @@ def parse_page(rid):
         html = html.replace(u'R\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9pertoire International de Litt\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9rature Musicale', u'R\xe9pertoire International de Litt\xe9rature Musicale')
     if html.find(u'Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics'):
         html = html.replace(u'Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics', "Eric Weisstein's World of Mathematics")
-    erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) 
+    if html.find('\r\n'):
+        html = html.replace('\r\n', ' ') 
+    erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) #pos works <B>(.*?:)</B>\s((.|\n)*?)<BR>
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
     url_str = erf_dict['url']
