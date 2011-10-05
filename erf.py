@@ -35,7 +35,7 @@ def parse_page(rid):
         html = html.replace(u'Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics', "Eric Weisstein's World of Mathematics")
     if html.find('\r\n'):
         html = html.replace('\r\n', ' ') 
-    erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) #pos works <B>(.*?:)</B>\s((.|\n)*?)<BR>
+    erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) 
     erf_list = [[i[0].lower().rstrip(':').replace(" ", "_"), i[1]] for i in erf_list]
     erf_dict = dict(erf_list)
     url_str = erf_dict['url']
@@ -331,8 +331,8 @@ def write_to_atom():
             cursor.execute(resids)
             rids = cursor.fetchall()
             rids = [rid[0] for rid in rids]
-            erf_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html'))
-            library_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu'))
+            erf_uuid = 'urn:uuid:'+str(uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html'))
+            library_uuid = 'urn:uuid:'+str(uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu'))
             xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
             with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
                 xml.title('Eelectronic Resources - UC Berkeley Library')
