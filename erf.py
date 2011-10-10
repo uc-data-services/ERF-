@@ -241,11 +241,11 @@ def update_resources_in_db(update_list):
                 add = False #set add to false so function will remove
                 add_or_update_core(add, remove_core, rid)
             if remove_subjects:
-                print remove_subjects #need to pass remove subjects list to a remove_subject(): function
+                print remove_subjects #TODO need to pass remove subjects list to a remove_subject(): function
             erf_type = erf_dict['resource_type'] # create a list out of types 
             if erf_type:
                 print erf_type 
-            # need sql queries for types and then a add type and remove type function
+            # TODO need sql queries for types and then a add type and remove type function
             print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
 
 def add_or_update_core(add, erf_core, rid):
@@ -373,7 +373,7 @@ def write_to_atom():
                         if licensing != "NULL":
                             xml.dc__accessRights(licensing)
                         for subject in subjects_db:
-                            ##need another test to see if is core & if so, add attribute
+                            #TODO need another test to see if is core & if so, add attribute
                             xml.dc__subject(subject)
                         for a_title in alt_title:
                             xml.dc__alternate(a_title)
