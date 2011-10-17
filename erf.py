@@ -19,7 +19,7 @@ db_filename = 'erf.sqlite'
 RETRY_DELAY = 2
 
 def parse_page(rid):
-    '''Takes a resource_id (rid), fetches erf detail page, parses html, & returns a dict representing an erf entry'''
+    """Takes a resource_id (rid), fetches erf detail page, parses html, & returns a dict representing an erf entry"""
     detail = 'cmd=detail&'
     resid_slug = 'resId='
     rid = str(rid)
@@ -57,7 +57,7 @@ def parse_page(rid):
     return erf_dict
 
 def create_db_tables():
-    '''Creates tables for in erf.sqlite, If tables already exist, will drop them.'''
+    """Creates tables for in erf.sqlite, If tables already exist, will drop them."""
     print "Creating database and tables..."
     schema = 'erf_schema.sql'
     with sqlite3.connect(db_filename) as conn:
@@ -86,7 +86,7 @@ def get_resource_ids():
     return(unique_resids)
 
 def natsort(list_):
-    '''a natural sort copied from pypi'''
+    """'a natural sort copied from pypi"""
     # decorate
     tmp = [(int(re.search('\d+', i).group(0)), i) for i in list_]
     tmp.sort()
@@ -94,7 +94,7 @@ def natsort(list_):
     return [i[1] for i in tmp]
 
 def get_local_resids_and_update_dates():
-    '''Gets the resIds & last update dates from the local sqlite database'''
+    """Gets the resIds & last update dates from the local sqlite database"""
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()
         last_mod_stmt = "SELECT resource_id, last_modified FROM resource" #get the resource_id & last_modified date from local db
@@ -103,7 +103,7 @@ def get_local_resids_and_update_dates():
     return local_resids_and_updates
 
 def get_erf_resids_and_lastupdates(erf_res_ids):
-    '''Returns a list of ERF resIds and last update dates.'''
+    """Returns a list of ERF resIds and last update dates."""
     detail = 'cmd=detail&'
     erf_res_ids_last_mod = []
     for rid in erf_res_ids:
@@ -114,9 +114,9 @@ def get_erf_resids_and_lastupdates(erf_res_ids):
     return erf_res_ids_last_mod
 
 def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
-    '''Takes two 2-lists of resids & update dates -- one local from sqlite db and the other from the ERF website-- 
-    and determines what's new, what needs to be updated, what needs to be unpublished or removed. Then it calls the 
-    appropriate functions to add, update or unpublish.'''
+    """Takes two 2-lists of resids & update dates -- one local from sqlite db and the other from the ERF website--
+    and determines what's new, what needs to be updated, what needs to be unpublished or removed. Then it calls the
+    appropriate functions to add, update or unpublish."""
     local_resids, local_dates_modified = zip(*local_resids_and_dates) #unzipping the 2-tuple list so we can get diff
     erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates) #unzipping the 2-tuple list so we can find diff
     erf_resids = [int(i) for i in erf_resids]
@@ -143,7 +143,7 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     print "Number of resources needing updating: ", len(update_resids)
 
 def cancel_resource(canceled_resources):
-    '''Takes a list of resources that are no longer in the ERF and flags them as canceled in db.'''
+    """Takes a list of resources that are no longer in the ERF and flags them as canceled in db."""
     with sqlite3.connect(db_filename) as conn:
         cancel_stmt = "UPDATE resource SET is_canceled = 1 WHERE resource_id = ?"
         for resid in canceled_resources:
@@ -151,8 +151,8 @@ def cancel_resource(canceled_resources):
         conn.close()
 
 def add_new_resources_to_db(res_ids): 
-    '''Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
-    the resources to a local sqlite db. Calls other functions to add subjects & types.'''
+    """Takes a list of resource ids from the ERF, opens the ERF detail page for each, and then
+    the resources to a local sqlite db. Calls other functions to add subjects & types."""
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
     print "Adding new resources to the database."
@@ -198,8 +198,8 @@ def add_new_resources_to_db(res_ids):
 
 
 def update_resources_in_db(update_list):
-    '''Takes a list of resource ids needing updating, gets the erf_dict of each rid from page_parse(), then updates the 
-    local database directly and calls functions to also add new subject terms &/or remove terms.'''
+    """Takes a list of resource ids needing updating, gets the erf_dict of each rid from page_parse(), then updates the
+    local database directly and calls functions to also add new subject terms &/or remove terms."""
     print "Updating resources..."
     with sqlite3.connect(db_filename) as conn:
         cursor = conn.cursor()
@@ -249,7 +249,7 @@ def update_resources_in_db(update_list):
             print " Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title']
 
 def add_or_update_core(add, erf_core, rid):
-    '''Takes an add boolean (true=add, false=remove), erf_core list & rid and adds or updates the database.'''
+    """Takes an add boolean (true=add, false=remove), erf_core list & rid and adds or updates the database."""
     print erf_core, rid
     add_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     remove_stmt = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
@@ -269,7 +269,7 @@ def add_or_update_core(add, erf_core, rid):
                 conn.commit()
 
 def add_or_update_subject(subj_list, rid):
-    '''Takes a subject list, a core subject list and a resource id and adds those to the local db.'''
+    """Takes a subject list, a core subject list and a resource id and adds those to the local db."""
     add_subject_stmt = "INSERT INTO subject (term) VALUES (?)"
     link_subj_rid_stmt = "INSERT INTO r_s_bridge (rid,sid) VALUES (?,?)"
     with sqlite3.connect(db_filename) as conn:
@@ -291,7 +291,7 @@ def add_or_update_subject(subj_list, rid):
                 conn.commit()
             
 def add_type_to_db(type_list, rid):
-    '''Takes a list of ERF types & resource ID and adds to the local sqlite db.'''
+    """Takes a list of ERF types & resource ID and adds to the local sqlite db."""
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
     with sqlite3.connect(db_filename) as conn:
@@ -309,7 +309,7 @@ def add_type_to_db(type_list, rid):
             conn.commit()
             
 def add_alt_title(alt_title_list, rid):
-    '''Takes a alternate title list & resource id and adds it to the database.'''
+    """Takes a alternate title list & resource id and adds it to the database."""
     with sqlite3.connect(db_filename) as conn:
         c = conn.cursor()    
         alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
@@ -318,8 +318,8 @@ def add_alt_title(alt_title_list, rid):
             conn.commit()
                                 
 def write_to_atom():
-    '''Writes out ERF data from local SQLite db into ATOM schema extended with Dublin Core. Notifies pubsubhubbub 
-    service that a new update is ready for consuming.'''
+    """Writes out ERF data from local SQLite db into ATOM schema extended with Dublin Core. Notifies pubsubhubbub
+    service that a new update is ready for consuming."""
     detail = 'cmd=detail&'
     atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     erf_atom_filename = 'erf-atom.xml'
@@ -352,7 +352,7 @@ def write_to_atom():
                     cursor.execute(resource_details_stmt, (rid,))
                     resource_details_db = cursor.fetchone()
                     title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
-                    last_modified = last_modified + 'T12:00:00-07:00' #2011-09-29T19:20:26-07:00
+                    last_modified += 'T12:00:00-07:00' #2011-09-29T19:20:26-07:00
                     cursor.execute(subjects, (rid,))
                     subjects_db = cursor.fetchall()
                     subjects_db = [subject[0] for subject in subjects_db]
@@ -421,22 +421,24 @@ def main():
             assert False, "unhandled option"
 
 def usage():
-    print """
+    """Prints out usage information to the stout"""
+    erf_scrape_usage = """
     ERF Scrape Usage:
-    
+
     1. Create a new local erf sqlite datatbase:
-    
-    >>>python erf.py --create 
-    
+
+    >>>python erf.py --create
+
     2. Update the local erf data base:
-    
+
     >>>python erf.py --update
-    
+
     3. Write an ATOM representation of each resource to file: currently set to write to /var/www/html/erf-atom on doemo.lib
-    
+
     >>>python erf.py --atom
-    
+
     """
+    print erf_scrape_usage
 
 if __name__ == '__main__':
     main()
