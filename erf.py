@@ -210,8 +210,9 @@ def add_new_resources_to_db(res_ids):
 
 
 def update_resources_in_db(update_list):
-    """Takes a list of resource ids needing updating, gets the erf_dict of each rid from page_parse(), then updates the
-    local database directly and calls functions to also add new subject terms &/or remove terms."""
+    """Takes a list of resource ids needing updating, gets the erf_dict of
+    each rid from page_parse(), then updates the local database directly
+    and calls functions to also add new subject terms &/or remove terms."""
     print("Updating resources...")
     with sqlite3.connect(DB_FILENAME) as conn:
         cursor = conn.cursor()

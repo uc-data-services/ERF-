@@ -1,4 +1,6 @@
 import erf
+import random
+import sqlite3
 
 html = '''<html><head>
 <title>Electronic Resources-The Library-University of California, Berkeley</title><meta http-equiv="Content-type" content="text/html; charset=iso-8859-1" /><meta name="keywords" content="" /><meta name="description" content="" /><link rel="stylesheet" type="text/css" href="http://cluster4.lib.berkeley.edu:8080/ERF/images/library_pages_orig.css" />
@@ -39,7 +41,20 @@ def test_erf():
     #local_resids_and_dates = [(3, '01-02-2009'), (4065, '2011-05-02'), (1539, ' 2010-03-01')] 
     #erf_res_ids_and_dates = [(3, '01-02-2009'), (4065, '2011-05-15'),  (3029, '2009-05-07')]
     ##expect: update 4065, new 3029, unpub  1539
-    #erf.resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates)
+    erf.resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates)
     erf_dict = erf.parse_page(html)
-    print erf_dict
-    
+    #print erf_dict
+
+def get_random_e_resource_ids(number=2):
+    """
+    Gets a random number of resource_ids from local db for use in testing updating or canceling erf resources.
+    """
+    sql_file = 'erf.sqlite'
+    e_resource_query = "SELECT resource_id FROM resource"
+    with sqlite3.Connection(sql_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute(e_resource_query)
+        resource_ids = random.sample(cursor.fetchall(), number)
+        print(resource_ids)
+    return resource_ids
+
