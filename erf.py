@@ -155,7 +155,7 @@ def add_new_resources_to_db(res_ids):
     the resources to a local sqlite db. Calls other functions to add subjects & types."""
     conn = sqlite3.connect(db_filename)
     c = conn.cursor()
-    print "Adding new resources to the database."
+    print("Adding new resources to the database.")
     for id in res_ids:
         try:       
             erf_dict = parse_page(id)
@@ -187,7 +187,7 @@ def add_new_resources_to_db(res_ids):
            
         except sqlite3.ProgrammingError as err:
             print ('Error: ' + str(err))
-            print erf_dict['title']
+            print(id)
         except urllib2.URLError as err:
             if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
                 print str(err)
@@ -200,7 +200,7 @@ def add_new_resources_to_db(res_ids):
 def update_resources_in_db(update_list):
     """Takes a list of resource ids needing updating, gets the erf_dict of each rid from page_parse(), then updates the
     local database directly and calls functions to also add new subject terms &/or remove terms."""
-    print "Updating resources..."
+    print("Updating resources...")
     with sqlite3.connect(db_filename) as conn:
         cursor = conn.cursor()
         for resid in update_list:
@@ -250,7 +250,7 @@ def update_resources_in_db(update_list):
 
 def add_or_update_core(add, erf_core, rid):
     """Takes an add boolean (true=add, false=remove), erf_core list & rid and adds or updates the database."""
-    print erf_core, rid
+    print(erf_core, rid)
     add_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     remove_stmt = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
     is_core = 1
@@ -388,7 +388,7 @@ def publish_to_hub():
     try:     
         publish('https://pubsubhubbub.appspot.com', 
                 'http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml')
-        print "Publishing the atom feed to pubsubhubbub.appspot.com"
+        print("Publishing the atom feed to pubsubhubbub.appspot.com")
 
     except PublishError, e:
         print e
