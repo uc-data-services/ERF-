@@ -23,6 +23,8 @@ import uuid
 BASE_URL = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 DB_FILENAME = 'erf.sqlite'
 RETRY_DELAY = 2
+#TODO:move globals for write director for atom feed & url for atom feed
+#TODO:move to globals for pubsubhubbub
 
 def parse_page(rid):
     """Takes a resource_id (rid), fetches erf detail page, parses
@@ -382,7 +384,8 @@ def write_to_atom():
                     url_id = BASE_URL+detail+'resId='+str(resource_id)
                     with xml.entry:
                         xml.title(title)
-                        xml.id(url_id)
+                        xml.id(url_id) #TODO:need to see if id needs to be more than just url, but some unique id, so date plus url
+                        #TODO:add some url self item, preview in google
                         xml.updated(last_modified)
                         xml.dc__description(description)
                         if coverage != "NULL":
@@ -402,11 +405,14 @@ def write_to_atom():
             publish_to_hub()
 
 def publish_to_hub():
-    try:     
+    """
+    Publishes atom feed to pubsubhubbub.appspot.com
+    """
+    try:
         publish('https://pubsubhubbub.appspot.com', 
                 'http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml')
         print("Publishing the atom feed to pubsubhubbub.appspot.com")
-
+    #TODO:need to capture the http response and print to log
     except PublishError, e:
         print e
 
@@ -420,7 +426,7 @@ def main():
         sys.exit(2)
     for o, a in opts:
         if o in ("-u", "--update"):
-            #need function that updates db 
+            #TODO:need function that updates db
             erf_resource_ids = get_resource_ids()
             erf_ids_and_updates = get_erf_resids_and_lastupdates(erf_resource_ids)
             local_resids_updates = get_local_resids_and_update_dates()
