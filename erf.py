@@ -26,14 +26,21 @@ RETRY_DELAY = 2
 #TODO:move globals for write director for atom feed & url for atom feed
 #TODO:move to globals for pubsubhubbub
 
+def get_page(url):
+    response = urllib2.urlopen(url)
+    html = response.read()
+    return html
+
 def parse_page(rid):
     """Takes a resource_id (rid), fetches erf detail page, parses
     html, & returns a dict representing an erf entry"""
     detail = 'cmd=detail&'
     resid_slug = 'resId='
     rid = str(rid)
-    response = urllib2.urlopen(BASE_URL+detail+resid_slug+rid)
-    html = response.read().decode('latin1')
+    url = BASE_URL+detail+resid_slug+rid
+    html = get_page(url)
+    #response = urllib2.urlopen(BASE_URL+detail+resid_slug+rid)
+    #html = response.read().decode('latin1')
     if html.find(u'Centre\xc3\xa2\xc2\x80\xc2\x99s'):
         html = html.replace(u'Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
     if html.find(u'Tageb\xc3\x83\xc2\xbccher'):
@@ -80,15 +87,18 @@ def get_resource_ids():
     """Returns a set() of ERF resource ids from the ERF."""
     all_res_types = 'cmd=allResTypes'
     search_res_types = 'cmd=searchResType&'
-    response = urllib2.urlopen(BASE_URL+all_res_types)
-    html = response.read()
+    url = BASE_URL+all_res_types
+    #response = urllib2.urlopen(BASE_URL+all_res_types)
+    #html = response.read()
+    html = get_page(url)
     restypeid = re.findall('resTypeId=\d+', html) 
     resids = [] 
     #Open each resTypeId page & capture the individual ERF resource ids (resIds)
     for id in restypeid:
         typeurl = BASE_URL + search_res_types + str(id)
-        typeresponse = urllib2.urlopen(typeurl)
-        typehtml = typeresponse.read()
+        type_response = get_page(typeurl)
+        #typeresponse = urllib2.urlopen(typeurl)
+        #typehtml = typeresponse.read()
         resid_part = re.findall('resId=(\d+)', typehtml)
         resids.extend(resid_part)
     unique_resids = natsort(set(resids))
@@ -343,63 +353,62 @@ def write_to_atom():
     atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     erf_atom_filename = 'erf-atom.xml'
     now = rfc3339(datetime.datetime.now())
-    with sqlite3.connect(DB_FILENAME) as conn:
-        with open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:      
-            cursor = conn.cursor()
-            resids = "SELECT rid FROM resource"
-            cursor.execute(resids)
-            rids = cursor.fetchall()
-            rids = [rid[0] for rid in rids]
-            erf_uuid = 'urn:uuid:'+str(uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html'))
-            library_uuid = 'urn:uuid:'+str(uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu'))
-            xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
-            with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
-                xml.title('Electronic Resources - UC Berkeley Library')
-                xml.updated(now)
-                xml.link(None, href='http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml', rel='self', type='application/atom+xml')
-                xml.link(None, rel='hub', href='https://pubsubhubbub.appspot.com')
-                xml.id(erf_uuid)
-                with xml.author:
-                    xml.name('UC Berkeley The Library')
-                    xml.id(library_uuid)
-                for rid in rids:
-                    #rid = str(rid)
-                    resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
-                    subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
-                    #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
-                    types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"      
-                    cursor.execute(resource_details_stmt, (rid,))
-                    resource_details_db = cursor.fetchone()
-                    title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
-                    last_modified += 'T12:00:00-07:00' #2011-09-29T19:20:26-07:00
-                    cursor.execute(subjects, (rid,))
-                    subjects_db = cursor.fetchall()
-                    subjects_db = [subject[0] for subject in subjects_db]
-                    cursor.execute("SELECT title from alternate_title WHERE rid=?", (rid,))
-                    alt_title = cursor.fetchall()
-                    alt_title = [a_title[0] for a_title in alt_title]
-                    cursor.execute(types_stmt, (rid,))
-                    types = cursor.fetchall()
-                    types = [a_type[0] for a_type in types]
-                    url_id = BASE_URL+detail+'resId='+str(resource_id)
-                    with xml.entry:
-                        xml.title(title)
-                        xml.id(url_id) #TODO:need to see if id needs to be more than just url, but some unique id, so date plus url
-                        #TODO:add some url self item, preview in google
-                        xml.updated(last_modified)
-                        xml.dc__description(description)
-                        if coverage != "NULL":
-                            xml.dc__coverage(coverage)
-                        if licensing != "NULL":
-                            xml.dc__accessRights(licensing)
-                        for subject in subjects_db:
-                            #TODO need another test to see if is core & if so, add attribute
-                            xml.dc__subject(subject)
-                        for a_title in alt_title:
-                            xml.dc__alternate(a_title)
-                        for type in types:
-                            xml.dc__type(type)
-                        xml.link(None, href=url) 
+    with sqlite3.connect(DB_FILENAME) as conn, open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:
+        cursor = conn.cursor()
+        resids = "SELECT rid FROM resource"
+        cursor.execute(resids)
+        rids = cursor.fetchall()
+        rids = [rid[0] for rid in rids]
+        erf_uuid = 'urn:uuid:'+str(uuid.uuid3(uuid.NAMESPACE_DNS, 'library.berkeley.edu/find/types/electronic_resources.html'))
+        library_uuid = 'urn:uuid:'+str(uuid.uuid3(uuid.NAMESPACE_DNS, 'http://www.lib.berkeley.edu'))
+        xml = xmlwitch.Builder(version='1.0', encoding='utf-8')
+        with xml.feed(**{'xmlns':'http://www.w3.org/2005/Atom', 'xmlns:dc':'http://purl.org/dc/terms/'}):
+            xml.title('Electronic Resources - UC Berkeley Library')
+            xml.updated(now)
+            xml.link(None, href='http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml', rel='self', type='application/atom+xml')
+            xml.link(None, rel='hub', href='https://pubsubhubbub.appspot.com')
+            xml.id(erf_uuid)
+            with xml.author:
+                xml.name('UC Berkeley The Library')
+                xml.id(library_uuid)
+            for rid in rids:
+                #rid = str(rid)
+                resource_details_stmt = "SELECT title, resource_id, text, description, coverage, licensing, last_modified, url FROM resource WHERE rid = ?"
+                subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid= ?"
+                #alternate_title_stmt = "SELECT title FROM alternate_title WHERE rid = ?"
+                types_stmt = "SELECT type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ?"
+                cursor.execute(resource_details_stmt, (rid,))
+                resource_details_db = cursor.fetchone()
+                title, resource_id, text, description, coverage, licensing, last_modified, url = resource_details_db
+                last_modified += 'T12:00:00-07:00' #2011-09-29T19:20:26-07:00
+                cursor.execute(subjects, (rid,))
+                subjects_db = cursor.fetchall()
+                subjects_db = [subject[0] for subject in subjects_db]
+                cursor.execute("SELECT title from alternate_title WHERE rid=?", (rid,))
+                alt_title = cursor.fetchall()
+                alt_title = [a_title[0] for a_title in alt_title]
+                cursor.execute(types_stmt, (rid,))
+                types = cursor.fetchall()
+                types = [a_type[0] for a_type in types]
+                url_id = BASE_URL+detail+'resId='+str(resource_id)
+                with xml.entry:
+                    xml.title(title)
+                    xml.id(url_id) #TODO:need to see if id needs to be more than just url, but some unique id, so date plus url
+                    #TODO:add some url self item, preview in google
+                    xml.updated(last_modified)
+                    xml.dc__description(description)
+                    if coverage != "NULL":
+                        xml.dc__coverage(coverage)
+                    if licensing != "NULL":
+                        xml.dc__accessRights(licensing)
+                    for subject in subjects_db:
+                        #TODO need another test to see if is core & if so, add attribute
+                        xml.dc__subject(subject)
+                    for a_title in alt_title:
+                        xml.dc__alternate(a_title)
+                    for type in types:
+                        xml.dc__type(type)
+                    xml.link(None, href=url)
             print(xml)
             atom.write(str(xml))
             publish_to_hub()
