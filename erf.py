@@ -177,48 +177,49 @@ def add_new_resources_to_db(res_ids):
     """Takes a list of resource ids from the ERF, opens the ERF detail page for
      each, and then the resources to a local sqlite db. Calls other functions to
      add subjects & types."""
-    conn = sqlite3.connect(DB_FILENAME)
-    c = conn.cursor()
-    print("Adding new resources to the database.")
-    for id in res_ids:
-        try:       
-            erf_dict = parse_page(id)
-            erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
-            resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
-            c.execute(resource_stmt, (erf_dict['title'], 
-                                           erf_dict['resource_id'],
-                                           erf_dict['text'],
-                                           erf_dict['brief_description'], 
-                                           erf_dict['publication_dates_covered'],
-                                           erf_dict['licensing_restriction'],
-                                           erf_dict['record_last_modified'],
-                                           erf_dict['url'],)) # adding fields to the resource table in db
-            
-            conn.commit()
-            rid = c.lastrowid #capture last row id of resource
-            erf_subj = erf_dict['subject'] # create a list out of subject terms                    
-            add_or_update_subject(erf_subj, rid) #passing subject list, core list to add subject function            
-            erf_core = erf_dict['core_subject'] # create a list out of core subject terms 
-            add = True #set add to true so add_or_update_core() knows to add not remove 
-            add_or_update_core(add, erf_core, rid)
-            erf_type = erf_dict['resource_type'] # create a list out of types 
-            if "resource_type" in erf_dict: #need to instead test to see if 'resource_type' is empty
-                add_type_to_db(erf_type, rid)            
-            if "alternate_title" in erf_dict: 
-                erf_alt = erf_dict['alternate_title']
-                add_alt_title(erf_alt, rid)          
-            print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
-           
-        except sqlite3.ProgrammingError as err:
-            print ('Error: ' + str(err))
-            print(id)
-        except urllib2.URLError as err:
-            if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
-                print(str(err))
-                time.sleep(RETRY_DELAY)
-    c.execute("select rid from resource")
-    print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
-    conn.close()
+
+    with sqlite3.connect(DB_FILENAME) as conn:
+        c = conn.cursor()
+        print("Adding new resources to the database.")
+        for id in res_ids:
+            try:
+                erf_dict = parse_page(id)
+                erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
+                resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
+                c.execute(resource_stmt, (erf_dict['title'],
+                                               erf_dict['resource_id'],
+                                               erf_dict['text'],
+                                               erf_dict['brief_description'],
+                                               erf_dict['publication_dates_covered'],
+                                               erf_dict['licensing_restriction'],
+                                               erf_dict['record_last_modified'],
+                                               erf_dict['url'],)) # adding fields to the resource table in db
+
+                conn.commit()
+                rid = c.lastrowid #capture last row id of resource
+                erf_subj = erf_dict['subject'] # create a list out of subject terms
+                add_or_update_subject(erf_subj, rid) #passing subject list, core list to add subject function
+                erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+                add = True #set add to true so add_or_update_core() knows to add not remove
+                add_or_update_core(add, erf_core, rid)
+                erf_type = erf_dict['resource_type'] # create a list out of types
+                if "resource_type" in erf_dict: #need to instead test to see if 'resource_type' is empty
+                    add_type_to_db(erf_type, rid)
+                if "alternate_title" in erf_dict:
+                    erf_alt = erf_dict['alternate_title']
+                    add_alt_title(erf_alt, rid)
+                print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
+
+            except sqlite3.ProgrammingError as err:
+                print ('Error: ' + str(err))
+                print(id)
+            except urllib2.URLError as err:
+                if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
+                    print(str(err))
+                    time.sleep(RETRY_DELAY)
+        c.execute("select rid from resource")
+        print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
+        conn.close()
 
 
 def update_resources_in_db(update_list):
