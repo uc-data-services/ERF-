@@ -91,19 +91,19 @@ def get_resource_ids():
     #response = urllib2.urlopen(BASE_URL+all_res_types)
     #html = response.read()
     html = get_page(url)
-    restypeid = re.findall('resTypeId=\d+', html) 
-    resids = [] 
+    resource_type_id = re.findall('resTypeId=\d+', html)
+    resource_ids = []
     #Open each resTypeId page & capture the individual ERF resource ids (resIds)
-    for id in restypeid:
-        typeurl = BASE_URL + search_res_types + str(id)
-        type_response = get_page(typeurl)
+    for id in resource_type_id:
+        type_url = BASE_URL + search_res_types + str(id)
+        type_response = get_page(type_url)
         #typeresponse = urllib2.urlopen(typeurl)
         #typehtml = typeresponse.read()
-        resid_part = re.findall('resId=(\d+)', typehtml)
-        resids.extend(resid_part)
-    unique_resids = natsort(set(resids))
-    print("Number of unique Ids: ", len(unique_resids))
-    return unique_resids 
+        resid_part = re.findall("resId=(\d+)", type_response)
+        resource_ids.extend(resid_part)
+    unique_resource_ids = natsort(set(resource_ids))
+    print("Number of unique Ids: ", len(unique_resource_ids))
+    return unique_resource_ids
 
 def natsort(list_):
     """'a natural sort copied from pypi"""
@@ -133,7 +133,7 @@ def get_erf_resids_and_lastupdates(erf_res_ids):
         erf_res_ids_last_mod.append((rid, last_update)) #need to add as tuple
     return erf_res_ids_last_mod
 
-def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
+def resources_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
     """Takes two 2-lists of resids & update dates -- one local from sqlite db
     and the other from the ERF website--and determines what's new, what needs
     to be updated, what needs to be unpublished or removed. Then it calls the
@@ -162,6 +162,16 @@ def resids_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_d
     print("Number of new resources: ", len(new_resids))
     print("Number of resources needing canceling: ", len(canceled_resources))
     print("Number of resources needing updating: ", len(update_resids))
+
+## below methods will replace one above, should take two
+def added_resources(past_dict, current_dict):
+    return self.set_current - self.intersect
+def removed_resources(past_dict, current_dict):
+    return self.set_past - self.intersect
+def changed_resource(past_dict, current_dict):
+    return set(o for o in self.intersect if self.past_dict[o] != self.current_dict[o])
+def unchanged(self):
+    return set(o for o in self.intersect if self.past_dict[o] == self.current_dict[o])
 
 def cancel_resource(canceled_resources):
     """Takes a list of resources that are no longer in the
@@ -440,7 +450,7 @@ def main():
             erf_resource_ids = get_resource_ids()
             erf_ids_and_updates = get_erf_resids_and_lastupdates(erf_resource_ids)
             local_resids_updates = get_local_resids_and_update_dates()
-            resids_needing_updating_and_adding(local_resids_updates, erf_ids_and_updates)
+            resources_needing_updating_and_adding(local_resids_updates, erf_ids_and_updates)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
