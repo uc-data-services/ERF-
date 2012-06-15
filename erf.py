@@ -165,13 +165,24 @@ def resources_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_an
 
 ## below methods will replace one above, should take two
 def added_resources(past_dict, current_dict):
-    return self.set_current - self.intersect
+    """
+    new resource added to the erf
+    """
+    set_current, set_past = set(current_dict.keys()), set(past_dict.keys())
+    intersect = set_current.intersection(set_past)
+    return set_current - intersect
 def removed_resources(past_dict, current_dict):
-    return self.set_past - self.intersect
+    """
+    resources removed from erf
+    """
+    return set_past - intersect
 def changed_resource(past_dict, current_dict):
-    return set(o for o in self.intersect if self.past_dict[o] != self.current_dict[o])
+    """
+    resources that have changed - based on update date
+    """
+    return set(o for o in intersect if past_dict[o] != current_dict[o])
 def unchanged(self):
-    return set(o for o in self.intersect if self.past_dict[o] == self.current_dict[o])
+    return set(o for o in intersect if past_dict[o] == current_dict[o])
 
 def cancel_resource(canceled_resources):
     """Takes a list of resources that are no longer in the
