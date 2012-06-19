@@ -113,126 +113,95 @@ def natsort(list_):
     # undecorate
     return [i[1] for i in tmp]
 
-def get_local_resids_and_update_dates():
-    """Gets the resIds & last update dates from the local sqlite database"""
-    with sqlite3.connect(DB_FILENAME) as conn:
-        c = conn.cursor()
-        last_mod_stmt = "SELECT resource_id, last_modified FROM resource"
-        c.execute(last_mod_stmt)
-        local_resids_and_updates = c.fetchall() 
-    return local_resids_and_updates
-
-def get_erf_resids_and_lastupdates(erf_res_ids):
-    """Returns a list of ERF resIds and last update dates."""
-    detail = 'cmd=detail&'
-    erf_res_ids_last_mod = []
-    for rid in erf_res_ids:
-        #print rid
-        erf_dict = parse_page(rid)
-        last_update = erf_dict['record_last_modified']
-        erf_res_ids_last_mod.append((rid, last_update)) #need to add as tuple
-    return erf_res_ids_last_mod
-
-def resources_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_and_dates):
-    """Takes two 2-lists of resids & update dates -- one local from sqlite db
-    and the other from the ERF website--and determines what's new, what needs
-    to be updated, what needs to be unpublished or removed. Then it calls the
-    appropriate functions to add, update or canceling."""
-    local_resids, local_dates_modified = zip(*local_resids_and_dates)
-    erf_resids, erf_dates_last_modified = zip(*erf_res_ids_and_dates)
-    erf_resids = [int(i) for i in erf_resids]
-    erf_res_ids_and_dates = zip(erf_resids, erf_dates_last_modified) 
-    new_resids = set(erf_resids)-set(local_resids) #list of new resource ids
-    if new_resids: #see if new_resids list has
-        add_new_resources_to_db(new_resids)
-    canceled_resources = set(local_resids)-set(erf_resids)#needs canceling
-    if canceled_resources: 
-        cancel_resource(canceled_resources)
-    update_resids = []
-    for lids, ldate in local_resids_and_dates: #match id & then compare dates
-        for rids, rdate in erf_res_ids_and_dates:
-            if lids == rids:
-                if ldate != rdate: #if the dates of local and erf are different
-                    update_resids.append(rids)
-    if update_resids:  #see if there are resources needing updating
-        print(update_resids)
-        update_resources_in_db(update_resids)
-    if new_resids or canceled_resources or update_resids:
-        write_to_atom()
-    print("Number of new resources: ", len(new_resids))
-    print("Number of resources needing canceling: ", len(canceled_resources))
-    print("Number of resources needing updating: ", len(update_resids))
-
-### below methods will replace one above, should take two
-#def added_resources(past_dict, current_dict):
-#    """
-#    new resource added to the erf
-#    """
-#    set_current, set_past = set(current_dict.keys()), set(past_dict.keys())
-#    intersect = set_current.intersection(set_past)
-#    return set_current - intersect
-#def removed_resources(past_dict, current_dict):
-#    """
-#    resources removed from erf
-#    """
-#    return set_past - intersect
-#def changed_resource(past_dict, current_dict):
-#    """
-#    resources that have changed - based on update date
-#    """
-#    return set(o for o in intersect if past_dict[o] != current_dict[o])
-#def unchanged(self):
-#    return set(o for o in intersect if past_dict[o] == current_dict[o])
-
-def cancel_resource(canceled_resources):
+def set_all_to_canceled():
     """Takes a list of resources that are no longer in the
     ERF and flags them as canceled in db."""
     with sqlite3.connect(DB_FILENAME) as conn:
         c = conn.cursor()
-        cancel_stmt = "UPDATE resource SET is_canceled = 1 WHERE resource_id = ?"
-        for resid in canceled_resources:
-            c.execute(cancel_stmt, (resid,))
+        cancel_stmt = "UPDATE resource SET is_canceled = 1"
+        c.execute(cancel_stmt, (resid,))
         conn.close()
 
-def add_new_resources_to_db(res_ids): 
+def add_or_update_resources_to_db(res_ids):
     """Takes a list of resource ids from the ERF, opens the ERF detail page for
      each, and then the resources to a local sqlite db. Calls other functions to
      add subjects & types."""
 
     with sqlite3.connect(DB_FILENAME) as conn:
         c = conn.cursor()
-        print("Adding new resources to the database.")
         for id in res_ids:
             try:
                 erf_dict = parse_page(id)
-                #TODO:functions here to check to see if ID exists in db OR if update_date == update_date in db
-                #TODO:if resource_in_db(id, conn) or resource_needs_updating(id, conn)
-                erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
-                resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
-                c.execute(resource_stmt, (erf_dict['title'],
-                                               erf_dict['resource_id'],
-                                               erf_dict['text'],
-                                               erf_dict['brief_description'],
-                                               erf_dict['publication_dates_covered'],
-                                               erf_dict['licensing_restriction'],
-                                               erf_dict['record_last_modified'],
-                                               erf_dict['url'],)) # adding fields to the resource table in db
+                update_date = erf_dict['record_last_modified']#need this to test for equal to update_date in dict
+                title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
+                if not resource_in_db(id,c): #then add
+                    #TODO:functions here to check to see if ID exists in db OR if update_date == update_date in db
+                    #TODO:if resource_in_db(id, conn) or resource_needs_updating(id, conn)
+                    erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
+                    insert_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
+                    c.execute(insert_stmt, (erf_dict['title'],
+                                                   erf_dict['resource_id'],
+                                                   erf_dict['text'],
+                                                   erf_dict['brief_description'],
+                                                   erf_dict['publication_dates_covered'],
+                                                   erf_dict['licensing_restriction'],
+                                                   erf_dict['record_last_modified'],
+                                                   erf_dict['url'],)) # adding fields to the resource table in db
 
-                conn.commit()
-                rid = c.lastrowid #capture last row id of resource
-                erf_subj = erf_dict['subject'] # create a list out of subject terms
-                add_or_update_subject(erf_subj, rid) #passing subject list, core list to add subject function
-                erf_core = erf_dict['core_subject'] # create a list out of core subject terms
-                add = True #set add to true so add_or_update_core() knows to add not remove
-                add_or_update_core(add, erf_core, rid)
-                erf_type = erf_dict['resource_type'] # create a list out of types
-                if "resource_type" in erf_dict:
-                    add_type_to_db(erf_type, rid)
-                if "alternate_title" in erf_dict:
-                    erf_alt = erf_dict['alternate_title']
-                    add_alt_title(erf_alt, rid)
-                print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
 
+                    rid = c.lastrowid #capture last row id of resource
+                    erf_subj = erf_dict['subject'] # create a list out of subject terms
+                    add_or_update_subject(erf_subj, rid) #passing subject list, core list to add subject function
+                    erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+                    add = True #set add to true so add_or_update_core() knows to add not remove
+                    add_or_update_core(add, erf_core, rid)
+                    erf_type = erf_dict['resource_type'] # create a list out of types
+                    if "resource_type" in erf_dict:
+                        add_type_to_db(erf_type, rid)
+                    if "alternate_title" in erf_dict:
+                        erf_alt = erf_dict['alternate_title']
+                        add_alt_title(erf_alt, rid)
+                    print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
+                if resource_needs_updating(id, update_date,c): #then update it
+                    update_statement = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
+                    """
+                    #correct resid
+                    c.execute(update_statement, {'title':title,
+                                                      'text':text,
+                                                      'description':description,
+                                                      'coverage':coverage,
+                                                      'licensing':licensing,
+                                                      'last_modified':last_modified,
+                                                      'url':url,
+                                                      'resource_id':resource_id,})
+                    rid = c.lastrowid #capture last row id of resource
+                    erf_subj = erf_dict['subject'] # create a list out of subject terms
+                    subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
+                    c.execute(subjects, (rid,))
+                    subject_terms = c.fetchall()
+                    new_subjects = set(erf_subj)-set(subject_terms)
+                    if new_subjects:
+                        add_or_update_subject(new_subjects, rid) #adds new subjects
+                    erf_core = erf_dict['core_subject']#create a list out of core subject terms
+                    core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"
+                    c.execute(core_terms_stmt, (rid,))
+                    core_terms = c.fetchall()
+                    new_core = set(erf_core)-set(core_terms) #need to also check for removal
+                    if new_core: #there's somethign in new_core, then call method
+                        add = True
+                        add_or_update_core(add, erf_core, rid)
+                    remove_subjects = set(subject_terms)-set(erf_subj)#see what to remove from db
+                    remove_core = set(core_terms) - set(erf_core)
+                    if remove_core:
+                        add = False #set add to false so function will remove
+                        add_or_update_core(add, remove_core, rid)
+                    if remove_subjects:
+                        print(remove_subjects) #TODO need to pass remove subjects list to a remove_subject(): function
+                    erf_type = erf_dict['resource_type'] # create a list out of types
+                    if erf_type:
+                        print(erf_type)
+                        # TODO need sql queries for types and then a add type and remove type function
+                    print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
             except sqlite3.ProgrammingError as err:
                 print ('Error: ' + str(err))
                 print(id)
@@ -243,60 +212,6 @@ def add_new_resources_to_db(res_ids):
         c.execute("select rid from resource")
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
         conn.close()
-
-
-def update_resources_in_db(update_list):
-    """Takes a list of resource ids needing updating, gets the erf_dict of
-    each rid from page_parse(), then updates the local database directly
-    and calls functions to also add new subject terms &/or remove terms."""
-    print("Updating resources...")
-    with sqlite3.connect(DB_FILENAME) as conn:
-        cursor = conn.cursor()
-        for resid in update_list:
-            #TODO: test if update date == whats in db
-            resource_id = resid
-            query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
-             """
-            erf_dict = parse_page(resid)
-            title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
-            cursor.execute(query, {'title':title, 
-                                           'text':text,
-                                           'description':description, 
-                                           'coverage':coverage,
-                                           'licensing':licensing,
-                                           'last_modified':last_modified,
-                                           'url':url, 
-                                           'resource_id':resource_id,})
-            
-            conn.commit()
-            rid = cursor.lastrowid #capture last row id of resource
-            erf_subj = erf_dict['subject'] # create a list out of subject terms
-            subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
-            cursor.execute(subjects, (rid,))
-            subject_terms = cursor.fetchall()
-            new_subjects = set(erf_subj)-set(subject_terms)
-            if new_subjects:
-                add_or_update_subject(new_subjects, rid) #adds new subjects
-            erf_core = erf_dict['core_subject']#create a list out of core subject terms
-            core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"
-            cursor.execute(core_terms_stmt, (rid,))
-            core_terms = cursor.fetchall()
-            new_core = set(erf_core)-set(core_terms) #need to also check for removal            
-            if new_core: #there's somethign in new_core, then call method
-                add = True
-                add_or_update_core(add, erf_core, rid)
-            remove_subjects = set(subject_terms)-set(erf_subj)#see what to remove from db
-            remove_core = set(core_terms) - set(erf_core)
-            if remove_core:
-                add = False #set add to false so function will remove
-                add_or_update_core(add, remove_core, rid)
-            if remove_subjects:
-                print(remove_subjects) #TODO need to pass remove subjects list to a remove_subject(): function
-            erf_type = erf_dict['resource_type'] # create a list out of types 
-            if erf_type:
-                print(erf_type)
-            # TODO need sql queries for types and then a add type and remove type function
-            print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
 
 def add_or_update_core(add, erf_core, rid):
     """Takes an add boolean (true=add, false=remove), erf_core list & rid and
@@ -461,16 +376,16 @@ def main():
     for o, a in opts:
         if o in ("-u", "--update"):
             #TODO:need function that updates db
+            set_all_to_canceled()
             erf_resource_ids = get_resource_ids()
-            erf_ids_and_updates = get_erf_resids_and_lastupdates(erf_resource_ids)
-            local_resids_updates = get_local_resids_and_update_dates()
-            resources_needing_updating_and_adding(local_resids_updates, erf_ids_and_updates)
+            add_or_update_resources_to_db(erf_resource_ids)
+
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
         elif o in ("-c", "--create"):
             create_db_tables()
-            add_new_resources_to_db(get_resource_ids())
+            add_or_update_resources_to_db(get_resource_ids())
             write_to_atom()
         elif o in ("-a", "--atom"):
             write_to_atom()
