@@ -163,26 +163,26 @@ def resources_needing_updating_and_adding(local_resids_and_dates, erf_res_ids_an
     print("Number of resources needing canceling: ", len(canceled_resources))
     print("Number of resources needing updating: ", len(update_resids))
 
-## below methods will replace one above, should take two
-def added_resources(past_dict, current_dict):
-    """
-    new resource added to the erf
-    """
-    set_current, set_past = set(current_dict.keys()), set(past_dict.keys())
-    intersect = set_current.intersection(set_past)
-    return set_current - intersect
-def removed_resources(past_dict, current_dict):
-    """
-    resources removed from erf
-    """
-    return set_past - intersect
-def changed_resource(past_dict, current_dict):
-    """
-    resources that have changed - based on update date
-    """
-    return set(o for o in intersect if past_dict[o] != current_dict[o])
-def unchanged(self):
-    return set(o for o in intersect if past_dict[o] == current_dict[o])
+### below methods will replace one above, should take two
+#def added_resources(past_dict, current_dict):
+#    """
+#    new resource added to the erf
+#    """
+#    set_current, set_past = set(current_dict.keys()), set(past_dict.keys())
+#    intersect = set_current.intersection(set_past)
+#    return set_current - intersect
+#def removed_resources(past_dict, current_dict):
+#    """
+#    resources removed from erf
+#    """
+#    return set_past - intersect
+#def changed_resource(past_dict, current_dict):
+#    """
+#    resources that have changed - based on update date
+#    """
+#    return set(o for o in intersect if past_dict[o] != current_dict[o])
+#def unchanged(self):
+#    return set(o for o in intersect if past_dict[o] == current_dict[o])
 
 def cancel_resource(canceled_resources):
     """Takes a list of resources that are no longer in the
@@ -205,6 +205,8 @@ def add_new_resources_to_db(res_ids):
         for id in res_ids:
             try:
                 erf_dict = parse_page(id)
+                #TODO:functions here to check to see if ID exists in db OR if update_date == update_date in db
+                #TODO:if resource_in_db(id, conn) or resource_needs_updating(id, conn)
                 erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
                 resource_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
                 c.execute(resource_stmt, (erf_dict['title'],
@@ -224,7 +226,7 @@ def add_new_resources_to_db(res_ids):
                 add = True #set add to true so add_or_update_core() knows to add not remove
                 add_or_update_core(add, erf_core, rid)
                 erf_type = erf_dict['resource_type'] # create a list out of types
-                if "resource_type" in erf_dict: #need to instead test to see if 'resource_type' is empty
+                if "resource_type" in erf_dict:
                     add_type_to_db(erf_type, rid)
                 if "alternate_title" in erf_dict:
                     erf_alt = erf_dict['alternate_title']
@@ -251,6 +253,7 @@ def update_resources_in_db(update_list):
     with sqlite3.connect(DB_FILENAME) as conn:
         cursor = conn.cursor()
         for resid in update_list:
+            #TODO: test if update date == whats in db
             resource_id = resid
             query = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
              """
