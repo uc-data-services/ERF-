@@ -138,16 +138,15 @@ def add_or_update_resources_to_db(res_ids):
                     #TODO:functions here to check to see if ID exists in db OR if update_date == update_date in db
                     #TODO:if resource_in_db(id, conn) or resource_needs_updating(id, conn)
                     erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
-                    insert_stmt = "INSERT INTO resource (title, resource_id, text, description, coverage, licensing, last_modified, url) VALUES (?,?,?,?,?,?,?,?)"
-                    c.execute(insert_stmt, (erf_dict['title'],
-                                                   erf_dict['resource_id'],
-                                                   erf_dict['text'],
-                                                   erf_dict['brief_description'],
-                                                   erf_dict['publication_dates_covered'],
-                                                   erf_dict['licensing_restriction'],
-                                                   erf_dict['record_last_modified'],
-                                                   erf_dict['url'],)) # adding fields to the resource table in db
-
+                    insert_stmt = "INSERT INTO resource (title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url)"
+                    c.execute(insert_stmt, {'title':title,
+                                             'text':text,
+                                             'description':description,
+                                             'coverage':coverage,
+                                             'licensing':licensing,
+                                             'last_modified':last_modified,
+                                             'url':url,
+                                             'resource_id':resource_id,})
 
                     rid = c.lastrowid #capture last row id of resource
                     erf_subj = erf_dict['subject'] # create a list out of subject terms
@@ -234,13 +233,12 @@ def add_or_update_core(add, erf_core, rid):
                 c.execute(remove_stmt, (sid, rid))
                 conn.commit()
 
-def add_or_update_subject(subj_list, rid):
+def add_or_update_subject(subj_list, rid, c):
     """Takes a subject list, a core subject list and a resource id and adds
     those to the local db."""
     add_subject_stmt = "INSERT INTO subject (term) VALUES (?)"
     link_subj_rid_stmt = "INSERT INTO r_s_bridge (rid,sid) VALUES (?,?)"
     with sqlite3.connect(DB_FILENAME) as conn:
-        c = conn.cursor()
         for term in subj_list:
             c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
             has_term = c.fetchone()
