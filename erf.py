@@ -7,7 +7,7 @@ Finder for the UC Berkeley Library. It saves the resources to a
 local sqlite database and writes the resources out into a atom feed.
 """
 
-import urllib2
+from urllib2 import Request, urlopen, URLError
 import re
 import sqlite3
 import datetime
@@ -27,9 +27,25 @@ RETRY_DELAY = 2
 #TODO:move to globals for pubsubhubbub
 
 def get_page(url):
-    response = urllib2.urlopen(url)
-    html = response.read()
-    return html
+    """
+    takes a url and opens, reads and returns html.
+    """
+    req = Request(url)
+    try:
+        response = urlopen(req)
+    except URLError, e:
+        if hasattr(e, 'reason'):
+            print 'We failed to reach a server.'
+            print 'Reason: ', e.reason
+            time.sleep(RETRY_DELAY)
+        elif hasattr(e, 'code'):
+            print 'The server couldn\'t fulfill the request.'
+            print 'Error code: ', e.code
+            time.sleep(RETRY_DELAY)
+    else:
+        html = response.read()
+        return html
+
 
 def parse_page(rid):
     """Takes a resource_id (rid), fetches erf detail page, parses
@@ -163,7 +179,7 @@ def add_or_update_resources_to_db(res_ids):
                     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
                 if resource_needs_updating(id, update_date,c): #then update it
                     update_statement = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
-                    """
+                   """
                     #correct resid
                     c.execute(update_statement, {'title':title,
                                                       'text':text,
@@ -204,10 +220,7 @@ def add_or_update_resources_to_db(res_ids):
             except sqlite3.ProgrammingError as err:
                 print ('Error: ' + str(err))
                 print(id)
-            except urllib2.URLError as err:
-                if err.reason[0] == 104: # Will throw TypeError if error is local, but we probably don't care
-                    print(str(err))
-                    time.sleep(RETRY_DELAY)
+
         c.execute("select rid from resource")
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
         conn.close()
@@ -232,6 +245,12 @@ def add_or_update_core(add, erf_core, rid):
             else: #false means remove
                 c.execute(remove_stmt, (sid, rid))
                 conn.commit()
+
+def resource_in_db(id,c):
+    """ takes a resource id & a curser object and checks if id exists in db."""
+    resource_id_statement = 'SELECT rid FROM resource WHERE resource_id=?;'
+    c.execute(resource_id_statement,(id,))
+    return c.fetchone()
 
 def add_or_update_subject(subj_list, rid, c):
     """Takes a subject list, a core subject list and a resource id and adds
