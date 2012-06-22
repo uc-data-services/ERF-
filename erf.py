@@ -159,8 +159,7 @@ def add_or_update_resources_to_db(res_ids):
         c = conn.cursor()
         for id in res_ids:
             try:
-                erf_dict = parse_page(id) #get erf dict
-                update_date = erf_dict['record_last_modified']#need this to test for equal to update_date in dict
+                erf_dict = parse_page(id) #get erf as dict
                 title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
                 if not resource_in_db(id,c): #then add
                     erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
@@ -172,22 +171,18 @@ def add_or_update_resources_to_db(res_ids):
                                              'licensing':licensing,
                                              'last_modified':last_modified,
                                              'url':url,
-                                             'resource_id':resource_id,})
+                                             'resource_id':id,})
 
-                    rid = c.lastrowid #capture last row id of resource
-                    erf_subj = erf_dict['subject'] # create a list out of subject terms
-                    add_or_update_subject(erf_subj, rid) #passing subject list, core list to add subject function
-                    erf_core = erf_dict['core_subject'] # create a list out of core subject terms
+                    rid = c.lastrowid #capture row id of resource
+                    add_or_update_subject(erf_dict['subject'], rid) #passing subject list, core list to add subject function
                     add = True #set add to true so add_or_update_core() knows to add not remove
-                    add_or_update_core(add, erf_core, rid)
-                    erf_type = erf_dict['resource_type'] # create a list out of types
+                    add_or_update_core(add, erf_dict['core_subject'], rid, c)
                     if "resource_type" in erf_dict:
-                        add_type_to_db(erf_type, rid)
+                        add_type_to_db(erf_dict['resource_type'], rid)
                     if "alternate_title" in erf_dict:
-                        erf_alt = erf_dict['alternate_title']
-                        add_alt_title(erf_alt, rid)
+                        add_alt_title(erf_dict['alternate_title'], rid)
                     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
-                if resource_needs_updating(id, update_date,c): #then update it
+                if resource_needs_updating(id, erf_dict['record_last_modified'], c): #then update it
                     update_statement = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
                    """
                     #correct resid
@@ -198,20 +193,14 @@ def add_or_update_resources_to_db(res_ids):
                                                       'licensing':licensing,
                                                       'last_modified':last_modified,
                                                       'url':url,
-                                                      'resource_id':resource_id,})
+                                                      'resource_id':id,})
                     rid = c.lastrowid #capture last row id of resource
-                    erf_subj = erf_dict['subject'] # create a list out of subject terms
                     subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
                     c.execute(subjects, (rid,))
                     subject_terms = c.fetchall()
                     new_subjects = set(erf_subj)-set(subject_terms)
                     if new_subjects:
-                        add_or_update_subject(new_subjects, rid) #adds new subjects
-                    erf_core = erf_dict['core_subject']#create a list out of core subject terms
-                    core_terms_stmt = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=? AND r_s_bridge.is_core=1"
-                    c.execute(core_terms_stmt, (rid,))
-                    core_terms = c.fetchall()
-                    new_core = set(erf_core)-set(core_terms) #need to also check for removal
+                        add_or_update_subject(erf_dict['subject'], rid) #adds new subjects
                     if new_core: #there's somethign in new_core, then call method
                         add = True
                         add_or_update_core(add, erf_core, rid)
@@ -235,26 +224,24 @@ def add_or_update_resources_to_db(res_ids):
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
         conn.close()
 
-def add_or_update_core(add, erf_core, rid):
+def add_or_update_core(add, erf_core, rid, c):
     """Takes an add boolean (true=add, false=remove), erf_core list & rid and
     adds or updates the database."""
     print(erf_core, rid)
     add_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     remove_stmt = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
+    if not add:
+        c.execute("UPDATE r_s_bridge SET is_core = '0' WHERE rid = ?") #test this statement
     is_core = 1
-    with sqlite3.connect(DB_FILENAME) as conn:
-        c = conn.cursor()
-        for core_term in erf_core:
-            c.execute("SELECT sid FROM subject WHERE term=?", (core_term,))    
-            is_term = c.fetchone() 
-            sid = is_term[0]
-            print(sid)
-            if add:
-                c.execute(add_stmt, (is_core, sid, rid))
-                conn.commit()
-            else: #false means remove
-                c.execute(remove_stmt, (sid, rid))
-                conn.commit()
+    for core_term in erf_core:
+        c.execute("SELECT sid FROM subject WHERE term=?", (core_term,))
+        is_term = c.fetchone()
+        sid = is_term[0]
+        print(sid)
+        if add:
+            c.execute(add_stmt, (is_core, sid, rid))
+        else: #false means its an update & poss. need to remove something
+            c.execute(remove_stmt, (sid, rid))
 
 def resource_in_db(id,c):
     """ takes a resource id & a curser object and checks if id exists in db."""
@@ -263,27 +250,24 @@ def resource_in_db(id,c):
     return c.fetchone()
 
 def add_or_update_subject(subj_list, rid, c):
-    """Takes a subject list, a core subject list and a resource id and adds
+    """Takes a subject list, a core subject list, a resource id, a cursor object and adds
     those to the local db."""
     add_subject_stmt = "INSERT INTO subject (term) VALUES (?)"
     link_subj_rid_stmt = "INSERT INTO r_s_bridge (rid,sid) VALUES (?,?)"
-    with sqlite3.connect(DB_FILENAME) as conn:
-        for term in subj_list:
-            c.execute("SELECT sid FROM subject WHERE term=?", (term,))    
-            has_term = c.fetchone()
-            if has_term: #term exists in subject table assign its sid ot sid variable
-                sid = has_term[0]
-                c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?", (sid,rid))
-                has_rid = c.fetchone()
-                if not has_rid: #if doesn't have 
-                    c.execute(link_subj_rid_stmt, (rid, sid)) 
-                    conn.commit()
-            else:    
-                c.execute(add_subject_stmt, (term,))
-                sid = c.lastrowid
+    for term in subj_list:
+        c.execute("SELECT sid FROM subject WHERE term=?", (term,))
+        has_term = c.fetchone()
+        if has_term: #term exists in subject table assign its sid ot sid variable
+            sid = has_term[0]
+            c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?", (sid,rid))
+            has_rid = c.fetchone()
+            if not has_rid: #if doesn't have
                 c.execute(link_subj_rid_stmt, (rid, sid))
-                conn.commit()
-            
+        else:
+            c.execute(add_subject_stmt, (term,))
+            sid = c.lastrowid
+            c.execute(link_subj_rid_stmt, (rid, sid))
+
 def add_type_to_db(type_list, rid):
     """Takes a list of ERF types & resource ID and adds to the local sqlite db.
     """
