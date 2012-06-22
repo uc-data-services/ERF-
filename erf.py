@@ -100,7 +100,9 @@ def create_db_tables():
         conn.executescript(schema)
 
 def get_resource_ids():
-    """Returns a set() of ERF resource ids from the ERF."""
+    """
+    Returns a set() of ERF resource ids from the ERF.
+    """
     all_res_types = 'cmd=allResTypes'
     search_res_types = 'cmd=searchResType&'
     url = BASE_URL+all_res_types
@@ -138,6 +140,16 @@ def set_all_to_canceled():
         c.execute(cancel_stmt, (resid,))
         conn.close()
 
+
+def resource_needs_updating(id, update_date, c):
+    """
+    takes resource id, update_date and cursor object and returns
+    """
+    update_query_statement = "SELECT last_modified FROM resource WHERE resource_id=?"
+    c.execute(update_query_statement, (id,))
+    return update_date == c.fetchone()[0]
+
+
 def add_or_update_resources_to_db(res_ids):
     """Takes a list of resource ids from the ERF, opens the ERF detail page for
      each, and then the resources to a local sqlite db. Calls other functions to
@@ -147,12 +159,10 @@ def add_or_update_resources_to_db(res_ids):
         c = conn.cursor()
         for id in res_ids:
             try:
-                erf_dict = parse_page(id)
+                erf_dict = parse_page(id) #get erf dict
                 update_date = erf_dict['record_last_modified']#need this to test for equal to update_date in dict
                 title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
                 if not resource_in_db(id,c): #then add
-                    #TODO:functions here to check to see if ID exists in db OR if update_date == update_date in db
-                    #TODO:if resource_in_db(id, conn) or resource_needs_updating(id, conn)
                     erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
                     insert_stmt = "INSERT INTO resource (title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url)"
                     c.execute(insert_stmt, {'title':title,
