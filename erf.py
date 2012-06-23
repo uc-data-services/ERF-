@@ -178,14 +178,13 @@ def add_or_update_resources_to_db(res_ids):
                     add = True #set add to true so add_or_update_core() knows to add not remove
                     add_or_update_core(add, erf_dict['core_subject'], rid, c)
                     if "resource_type" in erf_dict:
-                        add_type_to_db(erf_dict['resource_type'], rid)
+                        add_type_to_db(erf_dict['resource_type'], rid, c)
                     if "alternate_title" in erf_dict:
                         add_alt_title(erf_dict['alternate_title'], rid)
                     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
                 if resource_needs_updating(id, erf_dict['record_last_modified'], c): #then update it
                     update_statement = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
                    """
-                    #correct resid
                     c.execute(update_statement, {'title':title,
                                                       'text':text,
                                                       'description':description,
@@ -195,25 +194,12 @@ def add_or_update_resources_to_db(res_ids):
                                                       'url':url,
                                                       'resource_id':id,})
                     rid = c.lastrowid #capture last row id of resource
-                    subjects = "SELECT term FROM subject JOIN r_s_bridge ON subject.sid = r_s_bridge.sid WHERE rid=?"
-                    c.execute(subjects, (rid,))
-                    subject_terms = c.fetchall()
-                    new_subjects = set(erf_subj)-set(subject_terms)
-                    if new_subjects:
-                        add_or_update_subject(erf_dict['subject'], rid) #adds new subjects
-                    if new_core: #there's somethign in new_core, then call method
-                        add = True
-                        add_or_update_core(add, erf_core, rid)
-                    remove_subjects = set(subject_terms)-set(erf_subj)#see what to remove from db
-                    remove_core = set(core_terms) - set(erf_core)
-                    if remove_core:
-                        add = False #set add to false so function will remove
-                        add_or_update_core(add, remove_core, rid)
-                    if remove_subjects:
-                        print(remove_subjects) #TODO need to pass remove subjects list to a remove_subject(): function
-                    erf_type = erf_dict['resource_type'] # create a list out of types
-                    if erf_type:
-                        print(erf_type)
+                    add_or_update_subject(erf_dict['subject'], rid, c) #adds new subjects
+                    if 'core_subject' in erf_dict: #there's something in new_core, then call method
+                        add = False
+                        add_or_update_core(add, erf_dict['core_subject'], rid)
+                    if 'resource_type'in erf_dict:
+                        add_type_to_db(erf_dict['resource_type'], id)
                         # TODO need sql queries for types and then a add type and remove type function
                     print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
             except sqlite3.ProgrammingError as err:
@@ -268,34 +254,29 @@ def add_or_update_subject(subj_list, rid, c):
             sid = c.lastrowid
             c.execute(link_subj_rid_stmt, (rid, sid))
 
-def add_type_to_db(type_list, rid):
+def add_type_to_db(type_list, rid, c):
     """Takes a list of ERF types & resource ID and adds to the local sqlite db.
     """
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
-    with sqlite3.connect(DB_FILENAME) as conn:
-        c = conn.cursor()    
-        for term in type_list:
-            c.execute("SELECT tid FROM type WHERE type=?", (term,))
-            is_type = c.fetchone()
-            if is_type is not None:
-                tid = is_type[0]
-            else:
-                c.execute(type_stmt, (term,))
-                conn.commit()
-                tid = c.lastrowid
-            c.execute(rt_bridge_stmt, (rid, tid))
-            conn.commit()
+    for term in type_list:
+        c.execute("SELECT tid FROM type WHERE type=?", (term,))
+        is_type = c.fetchone()
+        if is_type is not None:
+            c.execute("SELECT tid,type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ? OR tid=?", (rid, term))
+            if
+            tid = is_type[0]
+        else:
+            c.execute(type_stmt, (term,)).tid
+            tid = c.lastrowid
+        c.execute(rt_bridge_stmt, (rid, tid))
             
-def add_alt_title(alt_title_list, rid):
+def add_alt_title(alt_title_list, rid, c):
     """Takes a alternate title list & resource id and adds it to the database."""
-    with sqlite3.connect(DB_FILENAME) as conn:
-        c = conn.cursor()    
-        alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
-        for term in alt_title_list:
-            c.execute(alt_title_stmt, (term, rid))  
-            conn.commit()
-                                
+    alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
+    for term in alt_title_list:
+        c.execute(alt_title_stmt, (term, rid))
+
 def write_to_atom():
     """Writes out ERF data from local SQLite db into ATOM schema extended with
      Dublin Core. Notifies pubsubhubbub service that a new update is ready
