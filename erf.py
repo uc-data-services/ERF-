@@ -98,6 +98,7 @@ def create_db_tables():
         with open(schema, 'rt') as f:
             schema = f.read()
         conn.executescript(schema)
+        conn.close()
 
 def get_resource_ids():
     """
@@ -132,14 +133,13 @@ def natsort(list_):
     return [i[1] for i in tmp]
 
 def set_all_to_canceled():
-    """Takes a list of resources that are no longer in the
-    ERF and flags them as canceled in db."""
+    """Flags all resources as canceled in db. Need to do this b/c we will switch back to uncanceled as we
+    iterate thru resource ids -- leaving the removed ids canceled."""
     with sqlite3.connect(DB_FILENAME) as conn:
         c = conn.cursor()
         cancel_stmt = "UPDATE resource SET is_canceled = 1"
         c.execute(cancel_stmt, (resid,))
         conn.close()
-
 
 def resource_needs_updating(id, update_date, c):
     """
@@ -161,6 +161,7 @@ def add_or_update_resources_to_db(res_ids):
             try:
                 erf_dict = parse_page(id) #get erf as dict
                 title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
+                #TODO: see if we can just pass the key:value of erf_dict to sql execute statement, removing above assignment
                 if not resource_in_db(id,c): #then add
                     erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
                     insert_stmt = "INSERT INTO resource (title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url)"
@@ -178,9 +179,9 @@ def add_or_update_resources_to_db(res_ids):
                     add = True #set add to true so add_or_update_core() knows to add not remove
                     add_or_update_core(add, erf_dict['core_subject'], rid, c)
                     if "resource_type" in erf_dict:
-                        add_type_to_db(erf_dict['resource_type'], rid, c)
+                        add_or_update_type_to_db(erf_dict['resource_type'], rid, c)
                     if "alternate_title" in erf_dict:
-                        add_alt_title(erf_dict['alternate_title'], rid)
+                        add_alt_title(erf_dict['alternate_title'], rid, c)
                     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
                 if resource_needs_updating(id, erf_dict['record_last_modified'], c): #then update it
                     update_statement = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
@@ -199,7 +200,7 @@ def add_or_update_resources_to_db(res_ids):
                         add = False
                         add_or_update_core(add, erf_dict['core_subject'], rid)
                     if 'resource_type'in erf_dict:
-                        add_type_to_db(erf_dict['resource_type'], id)
+                        add_or_update_type_to_db(erf_dict['resource_type'], id, c)
                         # TODO need sql queries for types and then a add type and remove type function
                     print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
             except sqlite3.ProgrammingError as err:
@@ -254,22 +255,26 @@ def add_or_update_subject(subj_list, rid, c):
             sid = c.lastrowid
             c.execute(link_subj_rid_stmt, (rid, sid))
 
-def add_type_to_db(type_list, rid, c):
+def add_or_update_type_to_db(type_list, rid, c):
     """Takes a list of ERF types & resource ID and adds to the local sqlite db.
     """
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
     for term in type_list:
         c.execute("SELECT tid FROM type WHERE type=?", (term,))
-        is_type = c.fetchone()
-        if is_type is not None:
-            c.execute("SELECT tid,type FROM type JOIN r_t_bridge ON type.tid = r_t_bridge.tid WHERE rid= ? OR tid=?", (rid, term))
-            if
-            tid = is_type[0]
+        is_type_in_db = c.fetchone()
+        if is_type_in_db is not None:
+            tid = is_type_in_db[0] #assign tid
+            #SELECT type.tid, type.type FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=3 AND r_t_bridge.rid=1077
+            c.execute("SELECT type.tid FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=? AND type.rid=?", (tid,rid))
+            term_rid_connected = c.fetchone()
+            if term_rid_connected is None:
+                c.execute(rt_bridge_stmt, (rid, tid))
+            else: pass #already exists and linked via the r_t_bridge
         else:
-            c.execute(type_stmt, (term,)).tid
+            c.execute(type_stmt, (term,))
             tid = c.lastrowid
-        c.execute(rt_bridge_stmt, (rid, tid))
+            c.execute(rt_bridge_stmt, (rid, tid))
             
 def add_alt_title(alt_title_list, rid, c):
     """Takes a alternate title list & resource id and adds it to the database."""
