@@ -175,7 +175,7 @@ def add_or_update_resources_to_db(res_ids):
                                              'resource_id':id,})
 
                     rid = c.lastrowid #capture row id of resource
-                    add_or_update_subject(erf_dict['subject'], rid) #passing subject list, core list to add subject function
+                    add_or_update_subject(erf_dict['subject'], rid, c) #passing subject list, core list to add subject function
                     add = True #set add to true so add_or_update_core() knows to add not remove
                     add_or_update_core(add, erf_dict['core_subject'], rid, c)
                     if "resource_type" in erf_dict:
@@ -201,7 +201,6 @@ def add_or_update_resources_to_db(res_ids):
                         add_or_update_core(add, erf_dict['core_subject'], rid)
                     if 'resource_type'in erf_dict:
                         add_or_update_type_to_db(erf_dict['resource_type'], id, c)
-                        # TODO need sql queries for types and then a add type and remove type function
                     print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
             except sqlite3.ProgrammingError as err:
                 print ('Error: ' + str(err))
@@ -211,27 +210,24 @@ def add_or_update_resources_to_db(res_ids):
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
         conn.close()
 
-def add_or_update_core(add, erf_core, rid, c):
+def add_or_update_core(erf_core, rid, c):
     """Takes an add boolean (true=add, false=remove), erf_core list & rid and
     adds or updates the database."""
+    #TODO:change to have core set to 0 and then run iterate thru list and set to 1
+    set_core_to_default = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
     print(erf_core, rid)
-    add_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
-    remove_stmt = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
-    if not add:
-        c.execute("UPDATE r_s_bridge SET is_core = '0' WHERE rid = ?") #test this statement
+    add_term_as_core_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     is_core = 1
     for core_term in erf_core:
         c.execute("SELECT sid FROM subject WHERE term=?", (core_term,))
         is_term = c.fetchone()
         sid = is_term[0]
-        print(sid)
-        if add:
-            c.execute(add_stmt, (is_core, sid, rid))
+        c.execute(add_term_as_core_stmt, (is_core, sid, rid))
         else: #false means its an update & poss. need to remove something
             c.execute(remove_stmt, (sid, rid))
 
 def resource_in_db(id,c):
-    """ takes a resource id & a curser object and checks if id exists in db."""
+    """ takes a resource id & a cursor object and checks if id exists in db."""
     resource_id_statement = 'SELECT rid FROM resource WHERE resource_id=?;'
     c.execute(resource_id_statement,(id,))
     return c.fetchone()
@@ -244,7 +240,7 @@ def add_or_update_subject(subj_list, rid, c):
     for term in subj_list:
         c.execute("SELECT sid FROM subject WHERE term=?", (term,))
         has_term = c.fetchone()
-        if has_term: #term exists in subject table assign its sid ot sid variable
+        if has_term is not None: #term exists in subject table assign its sid ot sid variable
             sid = has_term[0]
             c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?", (sid,rid))
             has_rid = c.fetchone()
@@ -372,7 +368,6 @@ def main():
         sys.exit(2)
     for o, a in opts:
         if o in ("-u", "--update"):
-            #TODO:need function that updates db
             set_all_to_canceled()
             erf_resource_ids = get_resource_ids()
             add_or_update_resources_to_db(erf_resource_ids)
