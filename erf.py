@@ -211,17 +211,17 @@ def add_or_update_resources_to_db(res_ids):
         conn.close()
 
 def add_or_update_core(erf_core, rid, c):
-    """Takes an add boolean (true=add, false=remove), erf_core list & rid and
-    adds or updates the database."""
-    #TODO:change to have core set to 0 and then run iterate thru list and set to 1
+    """Takes an  erf_core list & rid,  finds sid, sets all existing core terms for rid to zero. then
+    sets core to 1 for those in list."""
     set_core_to_default = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
     print(erf_core, rid)
     add_term_as_core_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     is_core = 1
     for core_term in erf_core:
-        c.execute("SELECT sid FROM subject WHERE term=?", (core_term,))
+        c.execute("SELECT sid FROM subject WHERE term=?", (core_term,)) #finds subject id for term
         is_term = c.fetchone()
         sid = is_term[0]
+        #TODO: set all to zero for where rid, sid.then iterate thru list and set to 1; need to add statement
         c.execute(add_term_as_core_stmt, (is_core, sid, rid))
         else: #false means its an update & poss. need to remove something
             c.execute(remove_stmt, (sid, rid))
