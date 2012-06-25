@@ -48,15 +48,14 @@ def get_page(url):
 
 
 def parse_page(rid):
-    """Takes a resource_id (rid), fetches erf detail page, parses
-    html, & returns a dict representing an erf entry"""
+    """
+    Takes a resource_id (rid), fetches erf detail page, parses html, & returns a dict representing an erf entry
+    """
     detail = 'cmd=detail&'
     resid_slug = 'resId='
     rid = str(rid)
     url = BASE_URL+detail+resid_slug+rid
     html = get_page(url)
-    #response = urllib2.urlopen(BASE_URL+detail+resid_slug+rid)
-    #html = response.read().decode('latin1')
     if html.find(u'Centre\xc3\xa2\xc2\x80\xc2\x99s'):
         html = html.replace(u'Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
     if html.find(u'Tageb\xc3\x83\xc2\xbccher'):
@@ -90,7 +89,9 @@ def parse_page(rid):
     return erf_dict
 
 def create_db_tables():
-    """Creates tables for in erf.sqlite, If tables already exist, will drop them."""
+    """
+    Creates tables for in erf.sqlite, If tables already exist, will drop them.
+    """
     print("Creating database and tables...")
     schema = 'erf_schema.sql'
     with sqlite3.connect(DB_FILENAME) as conn:
@@ -154,7 +155,6 @@ def add_or_update_resources_to_db(res_ids):
     """Takes a list of resource ids from the ERF, opens the ERF detail page for
      each, and then the resources to a local sqlite db. Calls other functions to
      add subjects & types."""
-
     with sqlite3.connect(DB_FILENAME) as conn:
         c = conn.cursor()
         for id in res_ids:
@@ -176,8 +176,7 @@ def add_or_update_resources_to_db(res_ids):
 
                     rid = c.lastrowid #capture row id of resource
                     add_or_update_subject(erf_dict['subject'], rid, c) #passing subject list, core list to add subject function
-                    add = True #set add to true so add_or_update_core() knows to add not remove
-                    add_or_update_core(add, erf_dict['core_subject'], rid, c)
+                    add_or_update_core(erf_dict['core_subject'], rid, c)
                     if "resource_type" in erf_dict:
                         add_or_update_type_to_db(erf_dict['resource_type'], rid, c)
                     if "alternate_title" in erf_dict:
@@ -213,18 +212,15 @@ def add_or_update_resources_to_db(res_ids):
 def add_or_update_core(erf_core, rid, c):
     """Takes an  erf_core list & rid,  finds sid, sets all existing core terms for rid to zero. then
     sets core to 1 for those in list."""
-    set_core_to_default = "UPDATE r_s_bridge SET is_core = '0' WHERE sid = ? AND rid = ?"
-    print(erf_core, rid)
+    set_core_to_default = "UPDATE r_s_bridge SET is_core = '0' WHERE is_core='1' AND rid = ?"
+    c.execute(set_core_to_default,(rid,)) #sets all existing is_core for rid to zero, so we can set to 1 (so we can remove ones)
     add_term_as_core_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     is_core = 1
     for core_term in erf_core:
         c.execute("SELECT sid FROM subject WHERE term=?", (core_term,)) #finds subject id for term
         is_term = c.fetchone()
         sid = is_term[0]
-        #TODO: set all to zero for where rid, sid.then iterate thru list and set to 1; need to add statement
         c.execute(add_term_as_core_stmt, (is_core, sid, rid))
-        else: #false means its an update & poss. need to remove something
-            c.execute(remove_stmt, (sid, rid))
 
 def resource_in_db(id,c):
     """ takes a resource id & a cursor object and checks if id exists in db."""
