@@ -196,8 +196,7 @@ def add_or_update_resources_to_db(res_ids):
                     rid = c.lastrowid #capture last row id of resource
                     add_or_update_subject(erf_dict['subject'], rid, c) #adds new subjects
                     if 'core_subject' in erf_dict: #there's something in new_core, then call method
-                        add = False
-                        add_or_update_core(add, erf_dict['core_subject'], rid)
+                        add_or_update_core(erf_dict['core_subject'], rid, c)
                     if 'resource_type'in erf_dict:
                         add_or_update_type_to_db(erf_dict['resource_type'], id, c)
                     print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
