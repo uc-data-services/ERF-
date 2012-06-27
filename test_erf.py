@@ -39,29 +39,45 @@ html = '''<html><head>
 
 
 def setup_func():
-    "set up test fixtures"
+    """set up test fixtures"""
     print "setup"
 
 def teardown_func():
-    "tear down test fixtures"
+    """tear down test fixtures"""
     print "tear down"
 
 @with_setup(setup_func, teardown_func)
 def test_resource_in_db():
     """
-    testing if resource_id is in db
+    testing function resource_in_db
     """
-    id_in_db = get_random_e_resource_ids(4, test_db_connection())
+    id_in_db = get_random_e_resource_ids(test_db_connection(), 4)
     for id in id_in_db:
-        print id, erf.resource_in_db(test_db_connection(), id)
+        print ("IN local sqlite_db", id, erf.resource_in_db(id, test_db_connection()))
+    ids_not_in_db = random.sample(range(5000,10000), 10)
+    for id in ids_not_in_db:
+        print ("Not in db", id, erf.resource_in_db(id,test_db_connection()))
+
+def test_get_page():
+    """testing get_page function"""
+    pass
+
+def test_parse_page():
+    """testing parse_page function"""
+    pass
+
+#TODO:identify the modules that call one another
 
 def get_random_e_resource_ids(c, number=2):
     """
-    Gets a random number of resource_ids from local db for use in testing updating or canceling erf resources.
+    Gets a random number of resource_ids from local db f#or use in testing updating or canceling erf resources.
     """
-    e_resource_query = "SELECT resource_id FROM resource"
-    c.execute(e_resource_query)
-    resource_ids = random.sample(c.fetchall(), number)
+    e_resource_query = "SELECT resource_id FROM resource ORDER BY Random() LIMIT ?"
+    c.execute(e_resource_query, (number,))
+    #resource_ids = random.sample(c.fetchall(), number)
+    resource_ids = c.fetchall()
+    resource_ids =  [rid[0] for rid in resource_ids]
+    print resource_ids
     return resource_ids
 
 def test_db_connection():
