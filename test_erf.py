@@ -59,11 +59,16 @@ def test_resource_in_db():
         print ("Not in db", id, erf.resource_in_db(id,test_db_connection()))
 
 def test_get_page():
-    """testing get_page function"""
-    pass
+    """
+    testing get_page function for three types of pages in our scrape
+    """
+    urls = ['http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=allResTypes', 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=searchResType&resTypeId=2', 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=4108']
+    for url in urls:
+        html = erf.get_page(url)
+
 
 def test_parse_page():
-    """testing parse_page function"""
+    """testing parse_page function, sending some resource IDs to fetch"""
     pass
 
 #TODO:identify the modules that call one another

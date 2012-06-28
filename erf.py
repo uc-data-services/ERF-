@@ -134,8 +134,10 @@ def natsort(list_):
     return [i[1] for i in tmp]
 
 def set_all_to_canceled():
-    """Flags all resources as canceled in db. Need to do this b/c we will switch back to uncanceled as we
-    iterate thru resource ids -- leaving the removed ids canceled."""
+    """
+    Flags all resources as canceled in db. Need to do this b/c we will switch back to uncanceled as we
+    iterate thru resource ids -- leaving the removed ids canceled.
+    """
     with sqlite3.connect(DB_FILENAME) as conn:
         c = conn.cursor()
         cancel_stmt = "UPDATE resource SET is_canceled = 1"
@@ -152,9 +154,11 @@ def resource_needs_updating(id, update_date, c):
 
 
 def add_or_update_resources_to_db(res_ids):
-    """Takes a list of resource ids from the ERF, opens the ERF detail page for
-     each, and then the resources to a local sqlite db. Calls other functions to
-     add subjects & types."""
+    """
+    Takes a list of resource ids from the ERF, opens the ERF detail page for
+    each, and then the resources to a local sqlite db. Calls other functions to
+    add subjects & types.
+     """
     with sqlite3.connect(DB_FILENAME) as conn:
         c = conn.cursor()
         for id in res_ids:
@@ -209,8 +213,10 @@ def add_or_update_resources_to_db(res_ids):
         conn.close()
 
 def add_or_update_core(erf_core, rid, c):
-    """Takes an  erf_core list & rid,  finds sid, sets all existing core terms for rid to zero. then
-    sets core to 1 for those in list."""
+    """
+    Takes an  erf_core list & rid,  finds sid, sets all existing core terms for rid to zero. then
+    sets core to 1 for those in list.
+    """
     set_core_to_default = "UPDATE r_s_bridge SET is_core = '0' WHERE is_core='1' AND rid = ?"
     c.execute(set_core_to_default,(rid,)) #sets all existing is_core for rid to zero, so we can set to 1 (so we can remove ones)
     add_term_as_core_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
@@ -222,7 +228,9 @@ def add_or_update_core(erf_core, rid, c):
         c.execute(add_term_as_core_stmt, (is_core, sid, rid))
 
 def resource_in_db(id,c):
-    """ takes a resource id & a cursor object and checks if id exists in db."""
+    """
+    takes a resource id & a cursor object and checks if id exists in db.
+    """
     resource_id_statement = 'SELECT rid FROM resource WHERE resource_id=?;'
     c.execute(resource_id_statement,(id,))
     return c.fetchone()
@@ -247,7 +255,8 @@ def add_or_update_subject(subj_list, rid, c):
             c.execute(link_subj_rid_stmt, (rid, sid))
 
 def add_or_update_type_to_db(type_list, rid, c):
-    """Takes a list of ERF types & resource ID and adds to the local sqlite db.
+    """
+    Takes a list of ERF types & resource ID and adds to the local sqlite db.
     """
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
@@ -268,15 +277,19 @@ def add_or_update_type_to_db(type_list, rid, c):
             c.execute(rt_bridge_stmt, (rid, tid))
             
 def add_alt_title(alt_title_list, rid, c):
-    """Takes a alternate title list & resource id and adds it to the database."""
+    """
+    Takes a alternate title list & resource id and adds it to the database.
+    """
     alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
     for term in alt_title_list:
         c.execute(alt_title_stmt, (term, rid))
 
 def write_to_atom():
-    """Writes out ERF data from local SQLite db into ATOM schema extended with
-     Dublin Core. Notifies pubsubhubbub service that a new update is ready
-     for consuming."""
+    """
+    Writes out ERF data from local SQLite db into ATOM schema extended with
+    Dublin Core. Notifies pubsubhubbub service that a new update is ready
+    for consuming.
+    """
     detail = 'cmd=detail&'
     atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     erf_atom_filename = 'erf-atom.xml'
@@ -380,7 +393,9 @@ def main():
             assert False, "unhandled option"
 
 def usage():
-    """Prints out usage information to the stout"""
+    """
+    Prints out usage information to the stout
+    """
     erf_scrape_usage = """
     ERF Scrape Usage:
 
