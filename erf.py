@@ -19,6 +19,7 @@ import xmlwitch
 from pubsubhubbub_publish import * 
 from rfc3339 import rfc3339
 import uuid
+import logging
 
 BASE_URL = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 DB_FILENAME = 'erf.sqlite'
