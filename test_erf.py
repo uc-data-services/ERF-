@@ -2,6 +2,7 @@ import erf
 import random
 import sqlite3
 from nose.tools import *
+import logging
 
 TEST_DB = '/home/tim/Dropbox/erf-db-test/erf.sqlite'
 
@@ -36,8 +37,7 @@ html = '''<html><head>
 <B>Record last modified:</B> 2008-03-05<BR> 
 <B>Comment(s) about this record:</B> <A HREF="mailto:erfmgr@library.berkeley.edu">ERF Manager</A></p>
 '''
-
-
+logging.
 def setup_func():
     """set up test fixtures"""
     print "setup"
