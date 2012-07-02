@@ -159,7 +159,7 @@ def add_or_update_resources_to_db(res_ids):
     Takes a list of resource ids from the ERF, opens the ERF detail page for
     each, and then the resources to a local sqlite db. Calls other functions to
     add subjects & types.
-     """
+    """
     with sqlite3.connect(DB_FILENAME) as conn:
         c = conn.cursor()
         for id in res_ids:
@@ -237,8 +237,10 @@ def resource_in_db(id,c):
     return c.fetchone()
 
 def add_or_update_subject(subj_list, rid, c):
-    """Takes a subject list, a core subject list, a resource id, a cursor object and adds
-    those to the local db."""
+    """
+    Takes a subject list, a core subject list, a resource id, a cursor object and adds
+    those to the local db.
+    """
     add_subject_stmt = "INSERT INTO subject (term) VALUES (?)"
     link_subj_rid_stmt = "INSERT INTO r_s_bridge (rid,sid) VALUES (?,?)"
     for term in subj_list:

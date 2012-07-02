@@ -37,7 +37,7 @@ html = '''<html><head>
 <B>Record last modified:</B> 2008-03-05<BR> 
 <B>Comment(s) about this record:</B> <A HREF="mailto:erfmgr@library.berkeley.edu">ERF Manager</A></p>
 '''
-logging.
+
 def setup_func():
     """set up test fixtures"""
     print "setup"
@@ -68,7 +68,15 @@ def test_get_page():
 
 
 def test_parse_page():
-    """testing parse_page function, sending some resource IDs to fetch"""
+    """
+    testing parse_page function, sending some resource IDs to fetch
+    """
+    pass
+
+def test_resource_needs_updating():
+    """
+    testing to see if a resource id & its update date for the erf  needs updating
+    """
     pass
 
 #TODO:identify the modules that call one another
