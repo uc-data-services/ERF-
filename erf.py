@@ -101,7 +101,7 @@ def create_db_tables():
     """
     Creates tables for in erf.sqlite, If tables already exist, will drop them.
     """
-    print("Creating database and tables...")
+    logger.info("Creating database and tables...")
     schema = 'erf_schema.sql'
     with sqlite3.connect(DB_FILENAME) as conn:
         #print 'Creating schema'
