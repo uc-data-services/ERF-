@@ -27,6 +27,14 @@ RETRY_DELAY = 2
 #TODO:move globals for write director for atom feed & url for atom feed
 #TODO:move to globals for pubsubhubbub
 
+#setting up logger below
+logger = logging.getLogger('erf-scrape')
+handler = logging.FileHandler('erf-scrape.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
 def get_page(url):
     """
     takes a url and opens, reads and returns html.
