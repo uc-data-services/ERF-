@@ -117,8 +117,6 @@ def get_resource_ids():
     all_res_types = 'cmd=allResTypes'
     search_res_types = 'cmd=searchResType&'
     url = BASE_URL+all_res_types
-    #response = urllib2.urlopen(BASE_URL+all_res_types)
-    #html = response.read()
     html = get_page(url)
     resource_type_id = re.findall('resTypeId=\d+', html)
     resource_ids = []
@@ -126,8 +124,6 @@ def get_resource_ids():
     for id in resource_type_id:
         type_url = BASE_URL + search_res_types + str(id)
         type_response = get_page(type_url)
-        #typeresponse = urllib2.urlopen(typeurl)
-        #typehtml = typeresponse.read()
         resid_part = re.findall("resId=(\d+)", type_response)
         resource_ids.extend(resid_part)
     unique_resource_ids = natsort(set(resource_ids))
