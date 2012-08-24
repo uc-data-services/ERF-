@@ -21,12 +21,12 @@ def test_resource_in_db():
     logger.info('Second will pass IDs not in db.')
     for id in get_random_e_resource_ids(test_db_connection(), 4):
         if erf.resource_in_db(id, test_db_connection()):    
-            logger.info("{id} returns true, should be in local sqlite3 database".format(id=id)
+            logger.info("{id} returns true, should be in local sqlite3 database".format(id=id))
         else:
             logger.info("{id} returns false, something wrong".format(id=id))
     for id in random.sample(range(5000,10000), 10):
-        if not erf.resource_in_db(id, test_db_connection())
-            logger.info("{id} returns false, not in db".format(id=id)
+        if not erf.resource_in_db(id, test_db_connection()):
+            logger.info("{id} returns false, not in db".format(id=id))
         else: 
             logger.info("{id} in db, something wrong".format(id=id))
 
@@ -56,7 +56,7 @@ def get_random_e_resource_ids(c, number=2):
     #resource_ids = random.sample(c.fetchall(), number)
     resource_ids = c.fetchall()
     resource_ids =  [rid[0] for rid in resource_ids]
-    logger.infor("10 random e-resource IDs: ")
+    logger.info("10 random e-resource IDs: ")
     return resource_ids
 
 def test_db_connection():
