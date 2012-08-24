@@ -6,6 +6,68 @@ import logging
 
 TEST_DB = '/home/tim/Dropbox/erf-db-test/erf.sqlite'
 
+logger = logging.getLogger('erf-scrape-test')
+handler = logging.FileHandler('erf-scrape-test.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+def test_resource_in_db():
+    """
+    testing function resource_in_db
+    """
+    logger.info('Testing if resource_in_db function works. First, selects random ids from local db to feed to function.')
+    logger.info('Second will pass IDs not in db.')
+    for id in get_random_e_resource_ids(test_db_connection(), 4):
+        if erf.resource_in_db(id, test_db_connection()):    
+            logger.info("{id} returns true, should be in local sqlite3 database".format(id=id)
+        else:
+            logger.info("{id} returns false, something wrong".format(id=id))
+    for id in random.sample(range(5000,10000), 10):
+        if not erf.resource_in_db(id, test_db_connection())
+            logger.info("{id} returns false, not in db".format(id=id)
+        else: 
+            logger.info("{id} in db, something wrong".format(id=id))
+
+def test_parse_page():
+    """
+    testing parsing page get_page function for three types of pages in our scrape
+    """
+    """urls = ['http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=allResTypes', \
+    'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=searchResType&resTypeId=2', \
+    'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=4108']"""
+    logger.info("Testing to see if get_page(url) function returns the types of pages we feed it.")
+    for id in get_random_e_resource_ids(test_db_connection(), 5):
+        erf_dict = erf.parse_page(id)
+        assert (erf_dict['title'] in erf_dict)
+
+def test_resource_needs_updating():
+    """
+    testing to see if a resource id & its update date for the erf  needs updating
+    """
+    pass
+
+#TODO:identify the modules that call one another
+
+def get_random_e_resource_ids(c, number=2):
+    """
+    Gets a random number of resource_ids from local db f#or use in testing updating or canceling erf resources.
+    """
+    e_resource_query = "SELECT resource_id FROM resource ORDER BY Random() LIMIT ?"
+    c.execute(e_resource_query, (number,))
+    #resource_ids = random.sample(c.fetchall(), number)
+    resource_ids = c.fetchall()
+    resource_ids =  [rid[0] for rid in resource_ids]
+    logger.infor("10 random e-resource IDs: ")
+    return resource_ids
+
+def test_db_connection():
+    with sqlite3.connect(TEST_DB) as conn:
+        c = conn.cursor()
+    return c
+
+
 html = '''<html><head>
 <title>Electronic Resources-The Library-University of California, Berkeley</title><meta http-equiv="Content-type" content="text/html; charset=iso-8859-1" /><meta name="keywords" content="" /><meta name="description" content="" /><link rel="stylesheet" type="text/css" href="http://cluster4.lib.berkeley.edu:8080/ERF/images/library_pages_orig.css" />
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><LINK REL=StyleSheet HREF="http://cluster4.lib.berkeley.edu:8080/ERF/css/style.css" TYPE="text/css" MEDIA=screen> 
@@ -37,63 +99,3 @@ html = '''<html><head>
 <B>Record last modified:</B> 2008-03-05<BR> 
 <B>Comment(s) about this record:</B> <A HREF="mailto:erfmgr@library.berkeley.edu">ERF Manager</A></p>
 '''
-
-def setup_func():
-    """set up test fixtures"""
-    print "setup"
-
-def teardown_func():
-    """tear down test fixtures"""
-    print "tear down"
-
-@with_setup(setup_func, teardown_func)
-def test_resource_in_db():
-    """
-    testing function resource_in_db
-    """
-    id_in_db = get_random_e_resource_ids(test_db_connection(), 4)
-    for id in id_in_db:
-        print ("IN local sqlite_db", id, erf.resource_in_db(id, test_db_connection()))
-    ids_not_in_db = random.sample(range(5000,10000), 10)
-    for id in ids_not_in_db:
-        print ("Not in db", id, erf.resource_in_db(id,test_db_connection()))
-
-def test_get_page():
-    """
-    testing get_page function for three types of pages in our scrape
-    """
-    urls = ['http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=allResTypes', 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=searchResType&resTypeId=2', 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=4108']
-    for url in urls:
-        html = erf.get_page(url)
-
-
-def test_parse_page():
-    """
-    testing parse_page function, sending some resource IDs to fetch
-    """
-    pass
-
-def test_resource_needs_updating():
-    """
-    testing to see if a resource id & its update date for the erf  needs updating
-    """
-    pass
-
-#TODO:identify the modules that call one another
-
-def get_random_e_resource_ids(c, number=2):
-    """
-    Gets a random number of resource_ids from local db f#or use in testing updating or canceling erf resources.
-    """
-    e_resource_query = "SELECT resource_id FROM resource ORDER BY Random() LIMIT ?"
-    c.execute(e_resource_query, (number,))
-    #resource_ids = random.sample(c.fetchall(), number)
-    resource_ids = c.fetchall()
-    resource_ids =  [rid[0] for rid in resource_ids]
-    print resource_ids
-    return resource_ids
-
-def test_db_connection():
-    with sqlite3.connect(TEST_DB) as conn:
-        c = conn.cursor()
-    return c

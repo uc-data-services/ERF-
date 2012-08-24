@@ -24,8 +24,6 @@ import logging
 BASE_URL = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
 DB_FILENAME = 'erf.sqlite'
 RETRY_DELAY = 2
-#TODO:move globals for write director for atom feed & url for atom feed
-#TODO:move to globals for pubsubhubbub
 
 #setting up logger below
 logger = logging.getLogger('erf-scrape')
