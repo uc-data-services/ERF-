@@ -34,13 +34,10 @@ def test_parse_page():
     """
     testing parsing page get_page function for three types of pages in our scrape
     """
-    """urls = ['http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=allResTypes', \
-    'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=searchResType&resTypeId=2', \
-    'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?cmd=detail&resId=4108']"""
     logger.info("Testing to see if get_page(url) function returns the types of pages we feed it.")
     for id in get_random_e_resource_ids(test_db_connection(), 5):
         erf_dict = erf.parse_page(id)
-        assert (erf_dict['title'] in erf_dict)
+        assert erf_dict['title']
 
 def test_resource_needs_updating():
     """
