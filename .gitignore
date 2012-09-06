@@ -1,4 +1,7 @@
 .idea/*
 *.pyc
 *.*~
-
+*.log
+.*
+.gitignore
+*.sublime*
