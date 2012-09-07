@@ -106,7 +106,6 @@ def create_db_tables():
         with open(schema, 'rt') as f:
             schema = f.read()
         conn.executescript(schema)
-        conn.close()
 
 def get_resource_ids():
     """
