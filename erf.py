@@ -169,6 +169,7 @@ def add_or_update_resources_to_db(res_ids):
                 title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
                 #TODO: see if we can just pass the key:value of erf_dict to sql execute statement, removing above assignment
                 if not resource_in_db(id,c): #then add
+                    print erf_dict
                     erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
                     insert_stmt = """INSERT INTO resource (title=:title, text = :text, description = :description, 
                                     coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  
