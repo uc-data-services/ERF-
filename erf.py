@@ -167,24 +167,24 @@ def add_or_update_resources_to_db(res_ids):
         for id in res_ids:
             try:
                 erf_dict = parse_page(id) #get erf as dict
-                title, text, description, coverage, licensing, last_modified, url = erf_dict['title'], erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url']
+                erf_dict['resource_id'] = int(id)
+                title, text, description, coverage, licensing, last_modified, url, resource_id = erf_dict['title'], \
+                 erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], \
+                 erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url'], erf_dict['resource_id']
                 #TODO: see if we can just pass the key:value of erf_dict to sql execute statement, removing above assignment
                 if not resource_in_db(id,c): #then add
-                    #print erf_dict['resource_id']
-                    erf_dict['resource_id'] = int(id) #need to pull out current resId from res_ids & add to dict
                     pprint(erf_dict)
-                    insert_stmt = """INSERT INTO resource (title=:title, text = :text, description = :description, 
-                                    coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  
-                                    url = :url)"""
-                    c.execute(insert_stmt, {'title':title,
-                                             'text':text,
-                                             'description':description,
-                                             'coverage':coverage,
-                                             'licensing':licensing,
-                                             'last_modified':last_modified,
-                                             'url':url,
-                                             'resource_id':id,})
-
+                    insert_stmt = """INSERT INTO resource VALUES (title=:title, text=:text, description=:description, 
+                                    coverage=:coverage, licensing=:licensing, last_modified=:last_modified,  
+                                    url=:url, resource_id=:resource_id)"""
+                    c.execute(insert_stmt, (erf_dict['title'],
+                                                   erf_dict['resource_id'],
+                                                   erf_dict['text'],
+                                                   erf_dict['brief_description'],
+                                                   erf_dict['publication_dates_covered'],
+                                                   erf_dict['licensing_restriction'],
+                                                   erf_dict['record_last_modified'],
+                                                   erf_dict['url'],))
                     rid = c.lastrowid #capture row id of resource
                     add_or_update_subject(erf_dict['subject'], rid, c) #passing subject list, core list to add subject function
                     add_or_update_core(erf_dict['core_subject'], rid, c)
