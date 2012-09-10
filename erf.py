@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-"""This module provides a way to web-scrape the Electronic Resource
-Finder for the UC Berkeley Library. It saves the resources to a
-local sqlite database and writes the resources out into a atom feed.
+"""This module web-scrapes the Electronic Resource
+Finder (ERF) for the UC Berkeley Library. It saves the resources to a
+local sqlite database and then writes the resources out into a atom feed.
 """
 
 from urllib2 import Request, urlopen, URLError
