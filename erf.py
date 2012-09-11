@@ -64,15 +64,18 @@ def parse_page(rid):
     rid = str(rid)
     url = BASE_URL+detail+resid_slug+rid
     html = get_page(url)
+    print rid
+    if html.find('Kafkas Werke'):
+        html = html.replace('Ã¼'.decode('latin1'), u'Tageb\xfccher')
+        #html = html.replace('Tageb\xc3\x83\xc2\xbccher', u'Tageb\xfccher')
     if html.find(u'Centre\xc3\xa2\xc2\x80\xc2\x99s'):
         html = html.replace(u'Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
-    if html.find(u'Tageb\xc3\x83\xc2\xbccher'):
-        html = html.replace(u'Tageb\xc3\x83\xc2\xbccher', u'Tageb\xfccher')
+    # if html.find(u'Tageb\xc3\x83\xc2\xbccher'):
+    #     html = html.replace(u'Tageb\xc3\x83\xc2\xbccher', u'Tageb\xfccher')
     if html.find(u'R\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9pertoire International de Litt\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9rature Musicale'):
         html = html.replace(u'R\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9pertoire International de Litt\xc3\x83\xc2\x83\xc3\x82\xc2\x83\xc3\x83\xc2\x82\xc3\x82\xc2\x83\xc3\x83\xc2\x83\xc3\x82\xc2\x82\xc3\x83\xc2\x82\xc3\x82\xc2\xa9rature Musicale', u'R\xe9pertoire International de Litt\xe9rature Musicale')
     if html.find(u'Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics'):
-        html = html.replace(u'Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics',
-                            "Eric Weisstein's World of Mathematics")
+        html = html.replace(u'Eric Weisstein\xc3\x82\xc2\x92s World of Mathematics', "Eric Weisstein's World of Mathematics")
     if html.find('\r\n'):
         html = html.replace('\r\n', ' ') 
     erf_list = list(re.findall('<B>(.*?:)</B>\s(.*?)<BR>', html)) 
@@ -168,23 +171,22 @@ def add_or_update_resources_to_db(res_ids):
             try:
                 erf_dict = parse_page(id) #get erf as dict
                 erf_dict['resource_id'] = int(id)
-                title, text, description, coverage, licensing, last_modified, url, resource_id = erf_dict['title'], \
-                 erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], \
-                 erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url'], erf_dict['resource_id']
+                #title, text, description, coverage, licensing, last_modified, url, resource_id = erf_dict['title'], \
+                 #erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], \
+                 #erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url'], erf_dict['resource_id']
                 #TODO: see if we can just pass the key:value of erf_dict to sql execute statement, removing above assignment
                 if not resource_in_db(id,c): #then add
-                    pprint(erf_dict)
-                    insert_stmt = """INSERT INTO resource VALUES (title=:title, text=:text, description=:description, 
-                                    coverage=:coverage, licensing=:licensing, last_modified=:last_modified,  
-                                    url=:url, resource_id=:resource_id)"""
+                    #pprint(erf_dict)
+                    insert_stmt = """INSERT INTO resource (title, text, description, coverage, licensing, last_modified,  
+                                    url, resource_id) VALUES (?,?,?,?,?,?,?,?)"""
                     c.execute(insert_stmt, (erf_dict['title'],
-                                                   erf_dict['resource_id'],
                                                    erf_dict['text'],
                                                    erf_dict['brief_description'],
                                                    erf_dict['publication_dates_covered'],
                                                    erf_dict['licensing_restriction'],
                                                    erf_dict['record_last_modified'],
-                                                   erf_dict['url'],))
+                                                   erf_dict['url'],
+                                                   erf_dict['resource_id'],))
                     rid = c.lastrowid #capture row id of resource
                     add_or_update_subject(erf_dict['subject'], rid, c) #passing subject list, core list to add subject function
                     add_or_update_core(erf_dict['core_subject'], rid, c)
@@ -193,17 +195,18 @@ def add_or_update_resources_to_db(res_ids):
                     if "alternate_title" in erf_dict:
                         add_alt_title(erf_dict['alternate_title'], rid, c)
                     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
-                if resource_needs_updating(id, erf_dict['record_last_modified'], c): #then update it
-                    update_statement = """UPDATE resource SET title=:title, text = :text, description = :description, coverage = :coverage, licensing = :licensing, last_modified = :last_modified,  url = :url WHERE resource_id = :resource_id
+                elif resource_needs_updating(id, erf_dict['record_last_modified'], c): #then update it
+                    update_statement = """UPDATE resource SET title=?, text=?, description=?, coverage=?, licensing=?, last_modified=?,  url=? \
+                        WHERE resource_id = ?
                    """
-                    c.execute(update_statement, {'title':title,
-                                                      'text':text,
-                                                      'description':description,
-                                                      'coverage':coverage,
-                                                      'licensing':licensing,
-                                                      'last_modified':last_modified,
-                                                      'url':url,
-                                                      'resource_id':id,})
+                    c.execute(insert_stmt, (erf_dict['title'],
+                                            erf_dict['text'],
+                                            erf_dict['brief_description'],
+                                            erf_dict['publication_dates_covered'],
+                                            erf_dict['licensing_restriction'],
+                                            erf_dict['record_last_modified'],
+                                            erf_dict['url'],
+                                            erf_dict['resource_id'],))
                     rid = c.lastrowid #capture last row id of resource
                     add_or_update_subject(erf_dict['subject'], rid, c) #adds new subjects
                     if 'core_subject' in erf_dict: #there's something in new_core, then call method
@@ -211,10 +214,11 @@ def add_or_update_resources_to_db(res_ids):
                     if 'resource_type'in erf_dict:
                         add_or_update_type_to_db(erf_dict['resource_type'], id, c)
                     print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
+                else:
+                    logger.info("No changes in ERF from the last runtime.")
             except sqlite3.ProgrammingError as err:
                 print ('Error: ' + str(err))
                 print(id)
-
         c.execute("select rid from resource")
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
         conn.close()
@@ -275,7 +279,7 @@ def add_or_update_type_to_db(type_list, rid, c):
         if is_type_in_db is not None:
             tid = is_type_in_db[0] #assign tid
             #SELECT type.tid, type.type FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=3 AND r_t_bridge.rid=1077
-            c.execute("SELECT type.tid FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=? AND type.rid=?", (tid,rid))
+            c.execute("SELECT type.tid FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=? AND r_t_bridge.rid=?", (tid,rid))
             term_rid_connected = c.fetchone()
             if term_rid_connected is None:
                 c.execute(rt_bridge_stmt, (rid, tid))
