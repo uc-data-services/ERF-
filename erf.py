@@ -66,8 +66,9 @@ def parse_page(rid):
     html = get_page(url)
     print rid
     if html.find('Kafkas Werke'):
-        html = html.replace('Ã¼'.decode('latin1'), u'Tageb\xfccher')
-        #html = html.replace('Tageb\xc3\x83\xc2\xbccher', u'Tageb\xfccher')
+        html = html.decode('utf-8')
+        #html = html.replace(u'Ã¼', u'Tageb\xfccher')
+        html = html.replace(u'Tageb\xc3\x83\xc2\xbccher', u'Tageb\xfccher')
     if html.find(u'Centre\xc3\xa2\xc2\x80\xc2\x99s'):
         html = html.replace(u'Centre\xc3\xa2\xc2\x80\xc2\x99s',"Centre's")
     # if html.find(u'Tageb\xc3\x83\xc2\xbccher'):
@@ -219,9 +220,11 @@ def add_or_update_resources_to_db(res_ids):
             except sqlite3.ProgrammingError as err:
                 print ('Error: ' + str(err))
                 print(id)
+        total_changes = conn.total_changes
+        conn.commit()
+        print total_changes
         c.execute("select rid from resource")
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
-        conn.close()
 
 def add_or_update_core(erf_core, rid, c):
     """
