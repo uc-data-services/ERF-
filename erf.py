@@ -3,7 +3,7 @@
 
 
 """This module web-scrapes the Electronic Resource
-Finder (ERF) for the UC Berkeley Library. It saves the resources to a
+Finder (ERF) from the UC Berkeley Library. It saves the resources to a
 local sqlite database and then writes the resources out into a atom feed.
 """
 
@@ -22,8 +22,7 @@ import uuid
 import logging
 from pprint import pprint
 
-BASE_URL = 'http://cluster4.lib.berkeley.edu:8080/ERF/servlet/ERFmain?'
-DB_FILENAME = 'erf.sqlite'
+DB_FILENAME = 'erf.sqlite' #TODO: need a function to open db and return cursor, look at flask example
 RETRY_DELAY = 2
 
 #setting up logger below
@@ -59,8 +58,8 @@ def parse_page(rid):
     """
     Takes a resource_id (rid), fetches erf detail page, parses html, & returns a dict representing an erf entry
     """
-    detail = 'cmd=detail&'
-    resid_slug = 'resId='
+    detail = config_section_map('url_parts')['detail']
+    resid_slug =  config_section_map('url_parts')['resid_slug']
     rid = str(rid)
     url = BASE_URL+detail+resid_slug+rid
     html = get_page(url)
@@ -116,8 +115,10 @@ def get_resource_ids():
     """
     Returns a set() of ERF resource ids from the ERF.
     """
-    all_res_types = 'cmd=allResTypes'
-    search_res_types = 'cmd=searchResType&'
+    #all_res_types = 'cmd=allResTypes'
+    all_res_types = config_section_map('url_parts')['all_res_types']
+    #search_res_types = 'cmd=searchResType&'
+    search_res_types = config_section_map('url_parts')['search_res_types']
     url = BASE_URL+all_res_types
     html = get_page(url)
     resource_type_id = re.findall('resTypeId=\d+', html)
@@ -306,9 +307,12 @@ def write_to_atom():
     Dublin Core. Notifies pubsubhubbub service that a new update is ready
     for consuming.
     """
-    detail = 'cmd=detail&'
-    atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
-    erf_atom_filename = 'erf-atom.xml'
+    #detail = 'cmd=detail&' 
+    detail = config_section_map('url_parts')['detail']
+    #atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
+    atom_xml_write_directory = config_section_map('file_folder')['atom_directory']
+    #erf_atom_filename = 'erf-atom.xml'
+    atom_filename = config_section_map('file_folder')['atom_filename']
     now = rfc3339(datetime.datetime.now())
     with sqlite3.connect(DB_FILENAME) as conn, open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:
         cursor = conn.cursor()
@@ -379,8 +383,25 @@ def publish_to_hub():
                 'http://doemo.lib.berkeley.edu/erf-atom/erf-atom.xml')
         print("Publishing the atom feed to pubsubhubbub.appspot.com")
     #TODO:need to capture the http response and print to log
+    #TODO: need to confirm this is working
     except PublishError, e:
         print e
+
+def config_section_map(section):
+    '''
+    takes a section in the config file and returns a dict of options
+    '''
+    dict1 = {}
+    options = Config.options(section)
+    for option in options:
+        try:
+            dict1[option] = Config.get(section, option)
+            if dict1[option] == -1:
+                DebugPrint("skip: %s" % option)
+        except:
+            print("exception on %s!" % option)
+            dict1[option] = None
+    return dict1
 
 def main():
     try:
