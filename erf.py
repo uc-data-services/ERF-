@@ -99,18 +99,6 @@ def parse_page(rid):
         erf_dict['brief_description'] = 'NULL'    
     return erf_dict
 
-def create_db_tables():
-    """
-    Creates tables for in erf.sqlite, If tables already exist, will drop them.
-    """
-    logger.info("Creating database and tables...")
-    schema = 'erf_schema.sql'
-    with sqlite3.connect(DB_FILENAME) as conn:
-        #print 'Creating schema'
-        with open(schema, 'rt') as f:
-            schema = f.read()
-        conn.executescript(schema)
-
 def get_resource_ids():
     """
     Returns a set() of ERF resource ids from the ERF.
@@ -140,6 +128,22 @@ def natsort(list_):
     tmp.sort()
     # undecorate
     return [i[1] for i in tmp]
+
+#TODO: find all the occurances where there's a need for db connection and refactor
+def connect_db():
+    return sqlite3.connect(config_section_map('file_folder')['db_filename'])
+
+def create_db_tables():
+    """
+    Creates tables for in erf.sqlite, If tables already exist, will drop them.
+    """
+    logger.info("Creating database and tables...")
+    schema = 'erf_schema.sql'
+    with sqlite3.connect(DB_FILENAME) as conn:
+        #print 'Creating schema'
+        with open(schema, 'rt') as f:
+            schema = f.read()
+        conn.executescript(schema)
 
 def set_all_to_canceled():
     """
@@ -173,10 +177,6 @@ def add_or_update_resources_to_db(res_ids):
             try:
                 erf_dict = parse_page(id) #get erf as dict
                 erf_dict['resource_id'] = int(id)
-                #title, text, description, coverage, licensing, last_modified, url, resource_id = erf_dict['title'], \
-                 #erf_dict['text'], erf_dict['brief_description'], erf_dict['publication_dates_covered'], \
-                 #erf_dict['licensing_restriction'], erf_dict['record_last_modified'], erf_dict['url'], erf_dict['resource_id']
-                #TODO: see if we can just pass the key:value of erf_dict to sql execute statement, removing above assignment
                 if not resource_in_db(id,c): #then add
                     #pprint(erf_dict)
                     insert_stmt = """INSERT INTO resource (title, text, description, coverage, licensing, last_modified,  
