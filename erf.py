@@ -21,6 +21,7 @@ from rfc3339 import rfc3339
 import uuid
 import logging
 from pprint import pprint
+import ConfigParser
 
 DB_FILENAME = 'erf.sqlite' #TODO: need a function to open db and return cursor, look at flask example
 RETRY_DELAY = 2
@@ -139,7 +140,7 @@ def create_db_tables():
     """
     logger.info("Creating database and tables...")
     schema = 'erf_schema.sql'
-    with sqlite3.connect(DB_FILENAME) as conn:
+    with connect_db() as conn:
         #print 'Creating schema'
         with open(schema, 'rt') as f:
             schema = f.read()
