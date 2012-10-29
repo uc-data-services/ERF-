@@ -21,10 +21,13 @@ from rfc3339 import rfc3339
 import uuid
 import logging
 from pprint import pprint
-import ConfigParser
+from ConfigParser import SafeConfigParser
 
-DB_FILENAME = 'erf.sqlite' #TODO: need a function to open db and return cursor, look at flask example
 RETRY_DELAY = 2
+
+#get a config obect and read config file
+Config = SafeConfigParser()
+Config.read('erf-scrape.ini')
 
 #setting up logger below
 logger = logging.getLogger('erf-scrape')
@@ -139,9 +142,8 @@ def create_db_tables():
     Creates tables for in erf.sqlite, If tables already exist, will drop them.
     """
     logger.info("Creating database and tables...")
-    schema = 'erf_schema.sql'
+    schema = config_section_map('file_folder')['erf_schema.sql']
     with connect_db() as conn:
-        #print 'Creating schema'
         with open(schema, 'rt') as f:
             schema = f.read()
         conn.executescript(schema)
@@ -151,18 +153,21 @@ def set_all_to_canceled():
     Flags all resources as canceled in db. Need to do this b/c we will switch back to uncanceled as we
     iterate thru resource ids -- leaving the removed ids canceled.
     """
-    with sqlite3.connect(DB_FILENAME) as conn:
+    with connect_db() as conn:
         c = conn.cursor()
         cancel_stmt = "UPDATE resource SET is_canceled = 1"
         c.execute(cancel_stmt, (resid,))
-        conn.close()
+        conn.close() #think redundant with 'with'
 
-def resource_needs_updating(id, update_date, c):
+def resource_needs_updating(id, update_date):
     """
-    takes resource id, update_date and cursor object and returns
+    takes resource id & update_date and returns a logical value representing whether or not the id
+    is in the db
     """
-    update_query_statement = "SELECT last_modified FROM resource WHERE resource_id=?"
-    c.execute(update_query_statement, (id,))
+    with connect_db() as conn:
+        c = conn.cursor()
+        update_query_statement = "SELECT last_modified FROM resource WHERE resource_id=?"
+        c.execute(update_query_statement, (id,))
     return update_date == c.fetchone()[0]
 
 
@@ -172,7 +177,7 @@ def add_or_update_resources_to_db(res_ids):
     each, and then the resources to a local sqlite db. Calls other functions to
     add subjects & types.
     """
-    with sqlite3.connect(DB_FILENAME) as conn:
+    with connect_db() as conn:
         c = conn.cursor()
         for id in res_ids:
             try:
@@ -191,14 +196,14 @@ def add_or_update_resources_to_db(res_ids):
                                                    erf_dict['url'],
                                                    erf_dict['resource_id'],))
                     rid = c.lastrowid #capture row id of resource
-                    add_or_update_subject(erf_dict['subject'], rid, c) #passing subject list, core list to add subject function
-                    add_or_update_core(erf_dict['core_subject'], rid, c)
+                    add_or_update_subject(erf_dict['subject'], rid) #passing subject list, core list to add subject function
+                    add_or_update_core(erf_dict['core_subject'], rid)
                     if "resource_type" in erf_dict:
-                        add_or_update_type_to_db(erf_dict['resource_type'], rid, c)
+                        add_or_update_type_to_db(erf_dict['resource_type'], rid)
                     if "alternate_title" in erf_dict:
-                        add_alt_title(erf_dict['alternate_title'], rid, c)
+                        add_alt_title(erf_dict['alternate_title'], rid)
                     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
-                elif resource_needs_updating(id, erf_dict['record_last_modified'], c): #then update it
+                elif resource_needs_updating(id, erf_dict['record_last_modified']): #then update it
                     update_statement = """UPDATE resource SET title=?, text=?, description=?, coverage=?, licensing=?, last_modified=?,  url=? \
                         WHERE resource_id = ?
                    """
@@ -211,11 +216,11 @@ def add_or_update_resources_to_db(res_ids):
                                             erf_dict['url'],
                                             erf_dict['resource_id'],))
                     rid = c.lastrowid #capture last row id of resource
-                    add_or_update_subject(erf_dict['subject'], rid, c) #adds new subjects
+                    add_or_update_subject(erf_dict['subject'], rid) #adds new subjects
                     if 'core_subject' in erf_dict: #there's something in new_core, then call method
-                        add_or_update_core(erf_dict['core_subject'], rid, c)
+                        add_or_update_core(erf_dict['core_subject'], rid)
                     if 'resource_type'in erf_dict:
-                        add_or_update_type_to_db(erf_dict['resource_type'], id, c)
+                        add_or_update_type_to_db(erf_dict['resource_type'], id)
                     print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
                 else:
                     logger.info("No changes in ERF from the last runtime.")
@@ -228,7 +233,7 @@ def add_or_update_resources_to_db(res_ids):
         c.execute("select rid from resource")
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
 
-def add_or_update_core(erf_core, rid, c):
+def add_or_update_core(erf_core, rid):
     """
     Takes an  erf_core list & rid,  finds sid, sets all existing core terms for rid to zero. then
     sets core to 1 for those in list.
@@ -238,69 +243,79 @@ def add_or_update_core(erf_core, rid, c):
     add_term_as_core_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     is_core = 1
     for core_term in erf_core:
-        c.execute("SELECT sid FROM subject WHERE term=?", (core_term,)) #finds subject id for term
-        is_term = c.fetchone()
-        sid = is_term[0]
-        c.execute(add_term_as_core_stmt, (is_core, sid, rid))
+        with connect_db() as conn:
+            c = conn.cursor()
+            c.execute("SELECT sid FROM subject WHERE term=?", (core_term,)) #finds subject id for term
+            is_term = c.fetchone()
+            sid = is_term[0]
+            c.execute(add_term_as_core_stmt, (is_core, sid, rid))
 
-def resource_in_db(id,c):
+def resource_in_db(id):
     """
     takes a resource id & a cursor object and checks if id exists in db.
     """
-    resource_id_statement = 'SELECT rid FROM resource WHERE resource_id=?;'
-    c.execute(resource_id_statement,(id,))
+    with connect_db() as conn:
+        c = conn.curstor
+        resource_id_statement = 'SELECT rid FROM resource WHERE resource_id=?;'
+        c.execute(resource_id_statement,(id,))
     return c.fetchone()
 
-def add_or_update_subject(subj_list, rid, c):
+def add_or_update_subject(subj_list, rid):
     """
     Takes a subject list, a core subject list, a resource id, a cursor object and adds
     those to the local db.
     """
     add_subject_stmt = "INSERT INTO subject (term) VALUES (?)"
     link_subj_rid_stmt = "INSERT INTO r_s_bridge (rid,sid) VALUES (?,?)"
-    for term in subj_list:
-        c.execute("SELECT sid FROM subject WHERE term=?", (term,))
-        has_term = c.fetchone()
-        if has_term is not None: #term exists in subject table assign its sid ot sid variable
-            sid = has_term[0]
-            c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?", (sid,rid))
-            has_rid = c.fetchone()
-            if not has_rid: #if doesn't have
+    with connect_db() as conn:
+        c = conn.cursor()
+        for term in subj_list:
+            c.execute("SELECT sid FROM subject WHERE term=?", (term,))
+            has_term = c.fetchone()
+            if has_term is not None: #term exists in subject table assign its sid ot sid variable
+                sid = has_term[0]
+                c.execute("SELECT rid FROM r_s_bridge WHERE sid=? AND rid=?", (sid,rid))
+                has_rid = c.fetchone()
+                if not has_rid: #if doesn't have
+                    c.execute(link_subj_rid_stmt, (rid, sid))
+            else:
+                c.execute(add_subject_stmt, (term,))
+                sid = c.lastrowid
                 c.execute(link_subj_rid_stmt, (rid, sid))
-        else:
-            c.execute(add_subject_stmt, (term,))
-            sid = c.lastrowid
-            c.execute(link_subj_rid_stmt, (rid, sid))
 
-def add_or_update_type_to_db(type_list, rid, c):
+def add_or_update_type_to_db(type_list, rid):
     """
     Takes a list of ERF types & resource ID and adds to the local sqlite db.
     """
     type_stmt = "INSERT INTO type (type) VALUES (?)"
     rt_bridge_stmt = "INSERT INTO r_t_bridge (rid, tid) VALUES (?,?)"
-    for term in type_list:
-        c.execute("SELECT tid FROM type WHERE type=?", (term,))
-        is_type_in_db = c.fetchone()
-        if is_type_in_db is not None:
-            tid = is_type_in_db[0] #assign tid
-            #SELECT type.tid, type.type FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=3 AND r_t_bridge.rid=1077
-            c.execute("SELECT type.tid FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=? AND r_t_bridge.rid=?", (tid,rid))
-            term_rid_connected = c.fetchone()
-            if term_rid_connected is None:
+    with connect_db() as conn:
+        c = conn.cursor()
+        for term in type_list:
+            c.execute("SELECT tid FROM type WHERE type=?", (term,))
+            is_type_in_db = c.fetchone()
+            if is_type_in_db is not None:
+                tid = is_type_in_db[0] #assign tid
+                #SELECT type.tid, type.type FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=3 AND r_t_bridge.rid=1077
+                c.execute("SELECT type.tid FROM type JOIN r_t_bridge ON type.tid=r_t_bridge.tid WHERE type.tid=? AND r_t_bridge.rid=?", (tid,rid))
+                term_rid_connected = c.fetchone()
+                if term_rid_connected is None:
+                    c.execute(rt_bridge_stmt, (rid, tid))
+                else: pass #already exists and linked via the r_t_bridge
+            else:
+                c.execute(type_stmt, (term,))
+                tid = c.lastrowid
                 c.execute(rt_bridge_stmt, (rid, tid))
-            else: pass #already exists and linked via the r_t_bridge
-        else:
-            c.execute(type_stmt, (term,))
-            tid = c.lastrowid
-            c.execute(rt_bridge_stmt, (rid, tid))
             
-def add_alt_title(alt_title_list, rid, c):
+def add_alt_title(alt_title_list, rid):
     """
     Takes a alternate title list & resource id and adds it to the database.
     """
     alt_title_stmt = "INSERT INTO alternate_title (title, rid) VALUES (?,?)"
-    for term in alt_title_list:
-        c.execute(alt_title_stmt, (term, rid))
+    with connect_db() as conn:
+        c = conn.cursor()
+        for term in alt_title_list:
+            c.execute(alt_title_stmt, (term, rid))
 
 def write_to_atom():
     """
@@ -308,14 +323,11 @@ def write_to_atom():
     Dublin Core. Notifies pubsubhubbub service that a new update is ready
     for consuming.
     """
-    #detail = 'cmd=detail&' 
     detail = config_section_map('url_parts')['detail']
-    #atom_xml_write_directory = '/var/www/html/erf-atom/' #'/home/tim/'
     atom_xml_write_directory = config_section_map('file_folder')['atom_directory']
-    #erf_atom_filename = 'erf-atom.xml'
     atom_filename = config_section_map('file_folder')['atom_filename']
     now = rfc3339(datetime.datetime.now())
-    with sqlite3.connect(DB_FILENAME) as conn, open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:
+    with connect_db() as conn:, open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:
         cursor = conn.cursor()
         resids = "SELECT rid FROM resource"
         cursor.execute(resids)
@@ -392,6 +404,7 @@ def config_section_map(section):
     '''
     takes a section in the config file and returns a dict of options
     '''
+    Config.read('erf-scrape.ini')
     dict1 = {}
     options = Config.options(section)
     for option in options:
