@@ -65,7 +65,8 @@ def parse_page(rid):
     detail = config_section_map('url_parts')['detail']
     resid_slug =  config_section_map('url_parts')['resid_slug']
     rid = str(rid)
-    url = BASE_URL+detail+resid_slug+rid
+    base_url = config_section_map('url_parts')['base_url']
+    url = base_url+detail+resid_slug+rid
     html = get_page(url)
     print rid
     if html.find('Kafkas Werke'):
@@ -107,17 +108,16 @@ def get_resource_ids():
     """
     Returns a set() of ERF resource ids from the ERF.
     """
-    #all_res_types = 'cmd=allResTypes'
+    base_url = config_section_map('url_parts')['base_url']
     all_res_types = config_section_map('url_parts')['all_res_types']
-    #search_res_types = 'cmd=searchResType&'
     search_res_types = config_section_map('url_parts')['search_res_types']
-    url = BASE_URL+all_res_types
+    url = base_url+all_res_types
     html = get_page(url)
     resource_type_id = re.findall('resTypeId=\d+', html)
     resource_ids = []
     #Open each resTypeId page & capture the individual ERF resource ids (resIds)
     for id in resource_type_id:
-        type_url = BASE_URL + search_res_types + str(id)
+        type_url = base_url + search_res_types + str(id)
         type_response = get_page(type_url)
         resid_part = re.findall("resId=(\d+)", type_response)
         resource_ids.extend(resid_part)
@@ -142,7 +142,7 @@ def create_db_tables():
     Creates tables for in erf.sqlite, If tables already exist, will drop them.
     """
     logger.info("Creating database and tables...")
-    schema = config_section_map('file_folder')['erf_schema.sql']
+    schema = config_section_map('file_folder')['db_schema']
     with connect_db() as conn:
         with open(schema, 'rt') as f:
             schema = f.read()
@@ -183,8 +183,9 @@ def add_or_update_resources_to_db(res_ids):
             try:
                 erf_dict = parse_page(id) #get erf as dict
                 erf_dict['resource_id'] = int(id)
-                if not resource_in_db(id,c): #then add
+                if not resource_in_db(id): #then add
                     #pprint(erf_dict)
+                    #TODO: add_resource(erf_dict)
                     insert_stmt = """INSERT INTO resource (title, text, description, coverage, licensing, last_modified,  
                                     url, resource_id) VALUES (?,?,?,?,?,?,?,?)"""
                     c.execute(insert_stmt, (erf_dict['title'],
@@ -204,6 +205,7 @@ def add_or_update_resources_to_db(res_ids):
                         add_alt_title(erf_dict['alternate_title'], rid)
                     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
                 elif resource_needs_updating(id, erf_dict['record_last_modified']): #then update it
+                    #TODO: update_resource()
                     update_statement = """UPDATE resource SET title=?, text=?, description=?, coverage=?, licensing=?, last_modified=?,  url=? \
                         WHERE resource_id = ?
                    """
@@ -233,6 +235,27 @@ def add_or_update_resources_to_db(res_ids):
         c.execute("select rid from resource")
         print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
 
+def add_resource(erf_dict):
+    """takes an erf_dict of a resource & adds to database."""
+    insert_stmt = """INSERT INTO resource (title, text, description, coverage, licensing, last_modified,  
+                    url, resource_id) VALUES (?,?,?,?,?,?,?,?)"""
+    c.execute(insert_stmt, (erf_dict['title'],
+                                   erf_dict['text'],
+                                   erf_dict['brief_description'],
+                                   erf_dict['publication_dates_covered'],
+                                   erf_dict['licensing_restriction'],
+                                   erf_dict['record_last_modified'],
+                                   erf_dict['url'],
+                                   erf_dict['resource_id'],))
+    rid = c.lastrowid #capture row id of resource
+    add_or_update_subject(erf_dict['subject'], rid) #passing subject list, core list to add subject function
+    add_or_update_core(erf_dict['core_subject'], rid)
+    if "resource_type" in erf_dict:
+        add_or_update_type_to_db(erf_dict['resource_type'], rid)
+    if "alternate_title" in erf_dict:
+        add_alt_title(erf_dict['alternate_title'], rid)
+    print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
+
 def add_or_update_core(erf_core, rid):
     """
     Takes an  erf_core list & rid,  finds sid, sets all existing core terms for rid to zero. then
@@ -255,7 +278,7 @@ def resource_in_db(id):
     takes a resource id & a cursor object and checks if id exists in db.
     """
     with connect_db() as conn:
-        c = conn.curstor
+        c = conn.cursor()
         resource_id_statement = 'SELECT rid FROM resource WHERE resource_id=?;'
         c.execute(resource_id_statement,(id,))
     return c.fetchone()
@@ -324,10 +347,11 @@ def write_to_atom():
     for consuming.
     """
     detail = config_section_map('url_parts')['detail']
+    base_url = config_section_map('url_parts')['base_url']
     atom_xml_write_directory = config_section_map('file_folder')['atom_directory']
     atom_filename = config_section_map('file_folder')['atom_filename']
     now = rfc3339(datetime.datetime.now())
-    with connect_db() as conn:, open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:
+    with connect_db() as conn, open(atom_xml_write_directory+erf_atom_filename, mode='w+') as atom:
         cursor = conn.cursor()
         resids = "SELECT rid FROM resource"
         cursor.execute(resids)
@@ -364,7 +388,7 @@ def write_to_atom():
                 cursor.execute(types_stmt, (rid,))
                 types = cursor.fetchall()
                 types = [a_type[0] for a_type in types]
-                url_id = BASE_URL+detail+'resId='+str(resource_id)
+                url_id = base_url+detail+'resId='+str(resource_id)
                 with xml.entry:
                     xml.title(title)
                     xml.id(url_id) #TODO:need to see if id needs to be more than just url, but some unique id, so date plus url
