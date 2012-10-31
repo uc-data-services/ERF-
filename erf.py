@@ -192,18 +192,18 @@ def add_or_update_resources_to_db(res_ids, c):
                                         erf_dict['url'],
                                         erf_dict['resource_id'],))
                 rid = c.lastrowid #capture row id of resource
-                add_or_update_subject(erf_dict['subject'], rid) #passing subject list, core list to add subject function
-                add_or_update_core(erf_dict['core_subject'], rid)
+                add_or_update_subject(erf_dict['subject'], rid, c) #passing subject list, core list to add subject function
+                add_or_update_core(erf_dict['core_subject'], rid, c)
                 if "resource_type" in erf_dict:
-                    add_or_update_type_to_db(erf_dict['resource_type'], rid)
+                    add_or_update_type_to_db(erf_dict['resource_type'], rid, c)
                 if "alternate_title" in erf_dict:
                     add_alt_title(erf_dict['alternate_title'], rid, c)
                 print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
             elif resource_needs_updating(id, erf_dict['record_last_modified']): #then update it
                 #TODO: update_resource()
-                update_statement = """UPDATE resource SET title=?, text=?, description=?, coverage=?, licensing=?, last_modified=?,  url=? \
-                    WHERE resource_id = ?
-               """
+                update_statement = """UPDATE resource SET title=?, text=?, description=?, coverage=?, \
+                                    licensing=?, last_modified=?,  url=? WHERE resource_id = ?
+                                  """
                 c.execute(insert_stmt, (erf_dict['title'],
                                         erf_dict['text'],
                                         erf_dict['brief_description'],
@@ -213,11 +213,11 @@ def add_or_update_resources_to_db(res_ids, c):
                                         erf_dict['url'],
                                         erf_dict['resource_id'],))
                 rid = c.lastrowid #capture last row id of resource
-                add_or_update_subject(erf_dict['subject'], rid) #adds new subjects
+                add_or_update_subject(erf_dict['subject'], rid, c) #adds new subjects
                 if 'core_subject' in erf_dict: #there's something in new_core, then call method
-                    add_or_update_core(erf_dict['core_subject'], rid)
+                    add_or_update_core(erf_dict['core_subject'], rid, c)
                 if 'resource_type'in erf_dict:
-                    add_or_update_type_to_db(erf_dict['resource_type'], id)
+                    add_or_update_type_to_db(erf_dict['resource_type'], id, c)
                 print(" Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'])
             else:
                 logger.info("No changes in ERF from the last runtime.")
@@ -228,29 +228,8 @@ def add_or_update_resources_to_db(res_ids, c):
     print total_changes
     c.execute("select rid from resource")
     print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
-
-# def add_resource(erf_dict):
-#     """takes an erf_dict of a resource & adds to database."""
-#     insert_stmt = """INSERT INTO resource (title, text, description, coverage, licensing, last_modified,  
-#                     url, resource_id) VALUES (?,?,?,?,?,?,?,?)"""
-#     c.execute(insert_stmt, (erf_dict['title'],
-#                                    erf_dict['text'],
-#                                    erf_dict['brief_description'],
-#                                    erf_dict['publication_dates_covered'],
-#                                    erf_dict['licensing_restriction'],
-#                                    erf_dict['record_last_modified'],
-#                                    erf_dict['url'],
-#                                    erf_dict['resource_id'],))
-#     rid = c.lastrowid #capture row id of resource
-#     add_or_update_subject(erf_dict['subject'], rid) #passing subject list, core list to add subject function
-#     add_or_update_core(erf_dict['core_subject'], rid)
-#     if "resource_type" in erf_dict:
-#         add_or_update_type_to_db(erf_dict['resource_type'], rid)
-#     if "alternate_title" in erf_dict:
-#         add_alt_title(erf_dict['alternate_title'], rid)
-#     print("Added Resource ID: ", erf_dict['resource_id'], "  Title: ", erf_dict['title'], "to database")
-
-def add_or_update_core(erf_core, rid):
+    
+def add_or_update_core(erf_core, rid, c):
     """
     Takes an  erf_core list & rid,  finds sid, sets all existing core terms for rid to zero. then
     sets core to 1 for those in list.
@@ -260,12 +239,11 @@ def add_or_update_core(erf_core, rid):
     add_term_as_core_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     is_core = 1
     for core_term in erf_core:
-        with connect_db() as conn:
-            c = conn.cursor()
-            c.execute("SELECT sid FROM subject WHERE term=?", (core_term,)) #finds subject id for term
-            is_term = c.fetchone()
-            sid = is_term[0]
-            c.execute(add_term_as_core_stmt, (is_core, sid, rid))
+        c = conn.cursor()
+        c.execute("SELECT sid FROM subject WHERE term=?", (core_term,)) #finds subject id for term
+        is_term = c.fetchone()
+        sid = is_term[0]
+        c.execute(add_term_as_core_stmt, (is_core, sid, rid))
 
 def resource_in_db(id, c):
     """
