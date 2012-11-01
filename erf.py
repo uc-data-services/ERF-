@@ -224,8 +224,6 @@ def add_or_update_resources_to_db(res_ids, c):
         except sqlite3.ProgrammingError as err:
             print ('Error: ' + str(err))
             print(id)
-    total_changes = conn.total_changes
-    print total_changes
     c.execute("select rid from resource")
     print("No added to DB:  ", len(c.fetchall()), "  ERF Resids; ",  len(res_ids))
     
@@ -239,7 +237,6 @@ def add_or_update_core(erf_core, rid, c):
     add_term_as_core_stmt = "UPDATE r_s_bridge SET is_core = ? WHERE sid = ? AND rid = ?"
     is_core = 1
     for core_term in erf_core:
-        c = conn.cursor()
         c.execute("SELECT sid FROM subject WHERE term=?", (core_term,)) #finds subject id for term
         is_term = c.fetchone()
         sid = is_term[0]
@@ -428,7 +425,9 @@ def main():
             create_db_tables(conn)
             c = conn.cursor()
             add_or_update_resources_to_db(get_resource_ids(),c)
-            c.commit
+            conn.commit()
+            total_changes = conn.total_changes
+            print total_changes
             write_to_atom(c)
             conn.close()
         elif o in ("-a", "--atom"):
